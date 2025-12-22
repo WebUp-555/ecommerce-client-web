@@ -1,0 +1,7 @@
+
+
+
+.shirt-card:hover img{
+  filter: brightness(1.2) drop-shadow(0 0 8px #ff0000);
+  transition: 0.3s ease;
+}

@@ -1,0 +1,31 @@
+{
+  "name": "japanee-ecom",
+  "version": "1.0.0",
+  "description": "This is a modern and responsive frontend for a T-shirt e-commerce website built with *React* and *Zustand*. It features product browsing, a shopping cart system, and a clean UI.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\" \"npm run admin\"",
+    "backend": "cd Backend && npm run dev",
+    "frontend": "cd UI-Ux && npm run dev",
+    "admin": "cd admindashboard/admin && npm run dev",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WebUp-555/japanee-ecom.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/WebUp-555/japanee-ecom/issues"
+  },
+  "homepage": "https://github.com/WebUp-555/japanee-ecom#readme",
+  "devDependencies": {
+    "baseline-browser-mapping": "^2.9.7",
+    "concurrently": "^9.2.1"
+  },
+  "dependencies": {
+    "zustand": "^5.0.8"
+  }
+}
