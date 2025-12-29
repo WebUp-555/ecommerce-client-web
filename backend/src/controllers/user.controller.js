@@ -7,6 +7,7 @@ import { PendingSignup } from "../models/pendingSignup.model.js";
 import e from "express";
 import jwt from "jsonwebtoken";
 import { sendEmail } from "../utils/mailer.js";
+import { Product } from "../models/products.model.js";
 
 const generate4DigitCode = () => Math.floor(1000 + Math.random() * 9000).toString();
 const addMinutes = (date, minutes) => new Date(date.getTime() + minutes * 60000);
@@ -443,6 +444,32 @@ const debugUser = asyncHandler(async (req, res) => {
     mongoose: user
   });
 });
+
+export const getRelatedProducts = asyncHandler(async (req, res) => {
+  const { productId } = req.params;
+
+  // 1️⃣ Find the current product
+  const product = await Product.findById(productId);
+  if (!product) {
+    throw new ApiError(404, "Product not found");
+  }
+
+  // 2️⃣ Fetch related products (same category, exclude current)
+  const relatedProducts = await Product.find({
+    category: product.category,
+    _id: { $ne: product._id },
+    stock: { $gt: 0 } // optional but recommended
+  })
+    .limit(8)
+    .sort({ createdAt: -1 });
+
+  // 3️⃣ Send response
+  res.status(200).json({
+    success: true,
+    products: relatedProducts
+  });
+});
+
 
 export {
   generateAccessTokenAndRefreshToken,
