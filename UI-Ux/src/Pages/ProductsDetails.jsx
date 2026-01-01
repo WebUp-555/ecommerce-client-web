@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getProductById, addToWishlist, removeFromWishlist, getWishlist } from "../Api/catalogApi";
+import { getProductById, addToWishlist, removeFromWishlist, getWishlist, getRelatedProducts } from "../Api/catalogApi";
 import { useCartStore } from "./cartStore";
 import { FaHeart, FaRegHeart } from "react-icons/fa";
 
@@ -37,6 +37,8 @@ export default function ProductsDetails() {
   const [successMessage, setSuccessMessage] = useState("");
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [relatedLoading, setRelatedLoading] = useState(false);
 
   const { addToCart, error: cartError, clearError } = useCartStore();
 
@@ -80,6 +82,24 @@ export default function ProductsDetails() {
       }
     })();
   }, [id]);
+
+  // Fetch related products
+  useEffect(() => {
+    if (product && product._id) {
+      setRelatedLoading(true);
+      (async () => {
+        try {
+          const products = await getRelatedProducts(product._id);
+          setRelatedProducts(products);
+        } catch (e) {
+          console.error('Failed to fetch related products:', e);
+          setRelatedProducts([]);
+        } finally {
+          setRelatedLoading(false);
+        }
+      })();
+    }
+  }, [product]);
 
   useEffect(() => {
     if (cartError) {
@@ -157,7 +177,7 @@ export default function ProductsDetails() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-900 via-black to-zinc-900 p-6">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Success Message */}
         {successMessage && (
           <div className="mb-4 bg-green-900/50 border border-green-600 text-green-400 px-4 py-3 rounded">
@@ -172,110 +192,180 @@ export default function ProductsDetails() {
           </div>
         )}
 
-        <div className="grid md:grid-cols-2 gap-8 items-start">
-          {/* Image Section with Glow */}
-          <div className="bg-zinc-800 rounded-2xl p-6 shadow-[0_0_30px_rgba(234,21,56,0.3)] hover:shadow-[0_0_40px_rgba(234,21,56,0.5)] transition-all duration-500 hover:scale-[1.02]">
-            {imageUrl ? (
-              <img
-                src={imageUrl}
-                alt={product.name || "Product image"}
-                loading="lazy"
-                className="w-full h-auto max-h-[500px] object-contain rounded-xl bg-zinc-900"
-              />
-            ) : (
-              <div className="w-full h-96 flex items-center justify-center rounded-xl bg-zinc-900 text-gray-400 text-sm">
-                No image available
-              </div>
-            )}
-          </div>
-
-          {/* Details Section */}
-          <div className="text-white space-y-6">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                  {product.name}
-                </h1>
-                {product.category && (
-                  <p className="text-red-400 text-sm mt-2 font-semibold tracking-wide">
-                    {product.category.name || product.category}
-                  </p>
-                )}
-              </div>
-              <button
-                onClick={handleWishlistToggle}
-                disabled={wishlistLoading}
-                className="ml-4 p-3 bg-zinc-800 rounded-full hover:bg-zinc-700 transition-all duration-300 disabled:opacity-50"
-                aria-label={isInWishlist ? "Remove from wishlist" : "Add to wishlist"}
-              >
-                {isInWishlist ? (
-                  <FaHeart className="text-red-500 text-2xl" />
+        <div className="grid lg:grid-cols-4 gap-8">
+          {/* Main Product Details */}
+          <div className="lg:col-span-4">
+            <div className="grid md:grid-cols-2 gap-8 items-start">
+              {/* Image Section with Glow */}
+              <div className="bg-zinc-800 rounded-2xl p-6 shadow-[0_0_30px_rgba(234,21,56,0.3)] hover:shadow-[0_0_40px_rgba(234,21,56,0.5)] transition-all duration-500 hover:scale-[1.02]">
+                {imageUrl ? (
+                  <img
+                    src={imageUrl}
+                    alt={product.name || "Product image"}
+                    loading="lazy"
+                    className="w-full h-auto max-h-[500px] object-contain rounded-xl bg-zinc-900"
+                  />
                 ) : (
-                  <FaRegHeart className="text-gray-400 text-2xl hover:text-red-400" />
+                  <div className="w-full h-96 flex items-center justify-center rounded-xl bg-zinc-900 text-gray-400 text-sm">
+                    No image available
+                  </div>
                 )}
-              </button>
-            </div>
-
-            {product.price && (
-              <div className="bg-zinc-800 rounded-xl p-4 inline-block shadow-lg">
-                <p className="text-3xl font-bold text-red-400">
-                  ₹{product.price.toLocaleString()}
-                </p>
               </div>
-            )}
 
-            <div className="bg-zinc-800/50 rounded-xl p-6 border border-zinc-700">
-              <h2 className="text-xl font-semibold mb-3 text-red-400">Description</h2>
-              <p className="text-gray-300 leading-relaxed">
-                {product.description || "No description available."}
-              </p>
-            </div>
-
-            {product.stock !== undefined && (
-              <div className="flex items-center gap-2">
-                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                  product.stock > 0 
-                    ? 'bg-green-500/20 text-green-400 border border-green-500/50' 
-                    : 'bg-red-500/20 text-red-400 border border-red-500/50'
-                }`}>
-                  {product.stock > 0 ? `In Stock (${product.stock})` : 'Out of Stock'}
-                </span>
-              </div>
-            )}
-
-            {/* Quantity Selector */}
-            {product.stock > 0 && (
-              <div className="flex items-center gap-4">
-                <span className="text-gray-300">Quantity:</span>
-                <div className="flex items-center gap-3 bg-zinc-800 rounded-lg p-2">
+              {/* Details Section */}
+              <div className="text-white space-y-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                      {product.name}
+                    </h1>
+                    {product.category && (
+                      <p className="text-red-400 text-sm mt-2 font-semibold tracking-wide">
+                        {product.category.name || product.category}
+                      </p>
+                    )}
+                  </div>
                   <button
-                    onClick={() => handleQuantityChange(-1)}
-                    disabled={quantity <= 1}
-                    className="bg-zinc-700 text-white px-3 py-1 rounded hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    onClick={handleWishlistToggle}
+                    disabled={wishlistLoading}
+                    className="ml-4 p-3 bg-zinc-800 rounded-full hover:bg-zinc-700 transition-all duration-300 disabled:opacity-50"
+                    aria-label={isInWishlist ? "Remove from wishlist" : "Add to wishlist"}
                   >
-                    −
-                  </button>
-                  <span className="px-4 font-semibold">{quantity}</span>
-                  <button
-                    onClick={() => handleQuantityChange(1)}
-                    disabled={quantity >= product.stock}
-                    className="bg-zinc-700 text-white px-3 py-1 rounded hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    +
+                    {isInWishlist ? (
+                      <FaHeart className="text-red-500 text-2xl" />
+                    ) : (
+                      <FaRegHeart className="text-gray-400 text-2xl hover:text-red-400" />
+                    )}
                   </button>
                 </div>
-              </div>
-            )}
 
-            <button
-              onClick={handleAddToCart}
-              disabled={product.stock < 1 || addingToCart}
-              className="w-full md:w-auto px-8 py-3 bg-gradient-to-r from-red-600 to-red-500 text-white font-bold rounded-xl shadow-lg hover:shadow-[0_0_20px_rgba(234,21,56,0.6)] hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-            >
-              {addingToCart ? 'Adding...' : product.stock < 1 ? 'Out of Stock' : 'Add to Cart'}
-            </button>
+                {product.price && (
+                  <div className="bg-zinc-800 rounded-xl p-4 inline-block shadow-lg">
+                    <p className="text-3xl font-bold text-red-400">
+                      ₹{product.price.toLocaleString()}
+                    </p>
+                  </div>
+                )}
+
+                <div className="bg-zinc-800/50 rounded-xl p-6 border border-zinc-700">
+                  <h2 className="text-xl font-semibold mb-3 text-red-400">Description</h2>
+                  <p className="text-gray-300 leading-relaxed">
+                    {product.description || "No description available."}
+                  </p>
+                </div>
+
+                {product.stock !== undefined && (
+                  <div className="flex items-center gap-2">
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                      product.stock > 0 
+                        ? 'bg-green-500/20 text-green-400 border border-green-500/50' 
+                        : 'bg-red-500/20 text-red-400 border border-red-500/50'
+                    }`}>
+                      {product.stock > 0 ? `In Stock (${product.stock})` : 'Out of Stock'}
+                    </span>
+                  </div>
+                )}
+
+                {/* Quantity Selector */}
+                {product.stock > 0 && (
+                  <div className="flex items-center gap-4">
+                    <span className="text-gray-300">Quantity:</span>
+                    <div className="flex items-center gap-3 bg-zinc-800 rounded-lg p-2">
+                      <button
+                        onClick={() => handleQuantityChange(-1)}
+                        disabled={quantity <= 1}
+                        className="bg-zinc-700 text-white px-3 py-1 rounded hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        −
+                      </button>
+                      <span className="px-4 font-semibold">{quantity}</span>
+                      <button
+                        onClick={() => handleQuantityChange(1)}
+                        disabled={quantity >= product.stock}
+                        className="bg-zinc-700 text-white px-3 py-1 rounded hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleAddToCart}
+                  disabled={product.stock < 1 || addingToCart}
+                  className="w-full md:w-auto px-8 py-3 bg-gradient-to-r from-red-600 to-red-500 text-white font-bold rounded-xl shadow-lg hover:shadow-[0_0_20px_rgba(234,21,56,0.6)] hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                >
+                  {addingToCart ? 'Adding...' : product.stock < 1 ? 'Out of Stock' : 'Add to Cart'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* More to Explore Section */}
+        {!relatedLoading && relatedProducts.length > 0 && (
+          <div className="mt-16">
+            <h2 className="text-3xl font-bold text-white mb-8">
+              <span className="bg-gradient-to-r from-red-500 to-red-400 bg-clip-text text-transparent">
+                More to Explore
+              </span>
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {relatedProducts.map((relatedProduct) => {
+                const relatedImageUrl = buildImageUrl(relatedProduct);
+                return (
+                  <div
+                    key={relatedProduct._id}
+                    onClick={() => navigate(`/product/${relatedProduct._id}`)}
+                    className="bg-zinc-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-[0_0_20px_rgba(234,21,56,0.3)] transition-all duration-300 hover:scale-105 cursor-pointer group"
+                  >
+                    {/* Product Image */}
+                    <div className="relative overflow-hidden bg-zinc-900 h-64">
+                      {relatedImageUrl ? (
+                        <img
+                          src={relatedImageUrl}
+                          alt={relatedProduct.name}
+                          loading="lazy"
+                          className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                          No image
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Product Info */}
+                    <div className="p-4 text-white">
+                      <h3 className="font-bold text-lg mb-2 line-clamp-2 text-gray-100">
+                        {relatedProduct.name}
+                      </h3>
+                      {relatedProduct.category && (
+                        <p className="text-red-400 text-sm mb-3 font-semibold">
+                          {relatedProduct.category.name || relatedProduct.category}
+                        </p>
+                      )}
+                      <div className="flex justify-between items-center">
+                        <p className="text-2xl font-bold text-red-400">
+                          ₹{relatedProduct.price?.toLocaleString()}
+                        </p>
+                        {relatedProduct.stock > 0 ? (
+                          <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">
+                            In Stock
+                          </span>
+                        ) : (
+                          <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded">
+                            Out of Stock
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

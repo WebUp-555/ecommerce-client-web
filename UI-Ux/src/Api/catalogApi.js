@@ -39,3 +39,8 @@ export const getBanners = async () => {
   const res = await axios.get('/banners');
   return res.data?.banners || res.data?.data?.banners || [];
 };
+
+export const getRelatedProducts = async (productId) => {
+  const res = await axios.get(`/users/related-products/${productId}`);
+  return res.data?.products || res.data?.data || [];
+};

@@ -460,6 +460,7 @@ export const getRelatedProducts = asyncHandler(async (req, res) => {
     _id: { $ne: product._id },
     stock: { $gt: 0 } // optional but recommended
   })
+    .populate('category', 'name')
     .limit(8)
     .sort({ createdAt: -1 });
 
