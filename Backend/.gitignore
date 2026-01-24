@@ -1,0 +1,26 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Node
+node_modules
+dist/
+dist-ssr/
+
+# Editor files
+.vscode/
+.idea/
+.DS_Store
+
+# Environment
+
+.env
+
+# Others
+*.local
+
+uploads/*
+!uploads/.gitkeep
