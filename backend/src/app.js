@@ -40,10 +40,12 @@ app.use(cookieParser());
 import adminRoutes from "./routes/admin.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import catalogRoutes from "./routes/catalog.routes.js";
+import orderRoutes from "./routes/order.routes.js";
 
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1", catalogRoutes);
+app.use("/api/v1/orders", orderRoutes);
 
 // ✅ Error Handler Middleware - MUST BE LAST
 app.use((err, req, res, next) => {

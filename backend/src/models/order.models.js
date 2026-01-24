@@ -1,4 +1,3 @@
-// models/Order.js
 import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema(
@@ -14,10 +13,27 @@ const orderSchema = new mongoose.Schema(
       },
     ],
 
-    amount: { type: Number, required: true }, // in rupees
-    status: { type: String, enum: ["PENDING", "PAID", "FAILED"], default: "PENDING" },
+    amount: { type: Number, required: true },
 
-    paymentProvider: { type: String, default: "RAZORPAY" },
+    status: {
+      type: String,
+      enum: [
+        "PENDING_PAYMENT",
+        "PAID",
+        "ACCEPTED",
+        "SHIPPED",
+        "DELIVERED",
+        "CANCELLED",
+        "FAILED",
+        "REJECTED",
+      ],
+      default: "PENDING_PAYMENT",
+    },
+
+    // ✅ Add here
+    cancelledAt: { type: Date },
+    cancelReason: { type: String, default: "" },
+
     razorpayOrderId: String,
     razorpayPaymentId: String,
     razorpaySignature: String,

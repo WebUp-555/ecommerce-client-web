@@ -1,24 +1,18 @@
+// routes/order.routes.js
 import express from "express";
-import { verifyJWT, requireAdmin } from "../middlewares/auth.middleware.js";
-import {
-  createOrder,
-  getOrderById,
-  getOrdersByUser,
-  updateOrderStatus,
-  getAllOrders,
-  deleteOrder,
-} from "../controllers/order.controller.js";
+import { createPaymentOrderFromCart, verifyPaymentAndCreateOrder,getAllOrders,getOrderById,deleteOrder,cancelMyOrder,cancelOrderByAdmin,getMyOrders } from "../controllers/order.controller.js";
+import { verifyJWT} from "../middlewares/auth.middleware.js";
+import { requireAdmin } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-// ============ USER ORDER ROUTES ============
-router.post("/", verifyJWT, createOrder); // Create order
-router.get("/user", verifyJWT, getOrdersByUser); // Get user's orders
-router.get("/:id", verifyJWT, getOrderById); // Get order by ID
-
-// ============ ADMIN ORDER ROUTES ============
-router.get("/", verifyJWT, requireAdmin, getAllOrders); // Get all orders (admin)
-router.patch("/:id/status", verifyJWT, requireAdmin, updateOrderStatus); // Update order status (admin)
-router.delete("/:id", verifyJWT, requireAdmin, deleteOrder); // Delete order (admin)
+router.post("/paynow", verifyJWT, createPaymentOrderFromCart);
+router.post("/verify", verifyJWT, verifyPaymentAndCreateOrder);
+router.get("/", verifyJWT, requireAdmin, getAllOrders);
+router.get("/:orderId", verifyJWT, requireAdmin, getOrderById);
+router.delete("/:orderId", verifyJWT, requireAdmin, deleteOrder);
+router.post("/cancel/myorder/:orderId", verifyJWT, cancelMyOrder);
+router.post("/cancel/order/:orderId", verifyJWT, requireAdmin, cancelOrderByAdmin);
+router.get("/myorders", verifyJWT, getMyOrders);
 
 export default router;
