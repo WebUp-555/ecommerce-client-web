@@ -159,6 +159,9 @@ export const useCartStore = create((set, get) => ({
     }
   },
 
+  // Clear cart
+  clearCart: () => set({ cartItems: [], totalAmount: 0, error: null }),
+
   // Clear error
   clearError: () => set({ error: null }),
 }));

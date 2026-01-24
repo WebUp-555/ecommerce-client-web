@@ -19,15 +19,18 @@ export default function Dashboard() {
         const headers = { Authorization: `Bearer ${token}` };
 
         // Fetch products, users, and orders in parallel
-        const [productsRes, usersRes] = await Promise.all([
+        const [productsRes, usersRes, ordersRes] = await Promise.all([
           axios.get(`${API_BASE_URL}/products`,{ headers }),
-          axios.get(`${API_BASE_URL}/admin/users`, { headers })
+          axios.get(`${API_BASE_URL}/admin/users`, { headers }),
+          axios.get(`${API_BASE_URL}/orders`, { headers })
         ]);
+
+        const ordersData = ordersRes.data?.data || ordersRes.data;
 
         setStats({
           products: productsRes.data?.products?.length || 0,
           users: usersRes.data?.users?.length || 0,
-          orders: 0 // Update when orders endpoint is ready
+          orders: ordersData?.orders?.length || ordersData?.total || 0
         });
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);

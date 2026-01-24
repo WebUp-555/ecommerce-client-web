@@ -22,6 +22,11 @@ const Sidebar = () => {
     setIsOpen(false);
   };
 
+  const handleMyOrders = () => {
+    navigate('/orders/my');
+    setIsOpen(false);
+  };
+
   const handleLogout = async () => {
     if (isLoggingOut) return;
     setIsLoggingOut(true);
@@ -56,6 +61,10 @@ const Sidebar = () => {
           <h2>Account Settings</h2>
           
           <ul className="sidebar-menu">
+            <li onClick={handleMyOrders}>
+              <span className="icon">📦</span>
+              My Orders
+            </li>
             <li onClick={handleUpdateDetails}>
               <span className="icon">👤</span>
               Update Details

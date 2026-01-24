@@ -8,6 +8,10 @@ import Products from './Pages/Products';
 import ProductDetails from './Pages/ProductsDetails';
 import CartPage from './Pages/cartPage';
 import PaymentPage from './Pages/PaymentPage';
+import CheckoutPage from './Pages/CheckoutPage';
+import PaymentSuccessPage from './Pages/PaymentSuccessPage';
+import MyOrdersPage from './Pages/MyOrdersPage';
+import MyOrderDetailsPage from './Pages/MyOrderDetailsPage';
 import PrivateRoute from './utils/PrivateRoute';
 import ForgotPassword from './Pages/ForgotPassword';
 import ChangePassword from './Pages/ChangePassword';
@@ -25,11 +29,17 @@ function App() {
   useEffect(() => {
     initializeCart();
     
-    // Listen for auth-ready event (dispatched after login)
+    // Listen for auth-ready event (dispatched after login/logout)
     const handleAuthReady = () => {
       // Small delay to ensure localStorage is fully committed
       setTimeout(() => {
-        reinitializeAfterLogin();
+        const token = localStorage.getItem('token');
+        if (token) {
+          reinitializeAfterLogin();
+        } else {
+          // User logged out - clear cart
+          useCartStore.setState({ cartItems: [], totalAmount: 0, error: null });
+        }
       }, 100);
     };
     
@@ -130,6 +140,38 @@ function AppContent() {
           element={
             <PrivateRoute>
               <Wishlist />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/checkout" 
+          element={
+            <PrivateRoute>
+              <CheckoutPage />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/orders/success/:orderId" 
+          element={
+            <PrivateRoute>
+              <PaymentSuccessPage />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/orders/my" 
+          element={
+            <PrivateRoute>
+              <MyOrdersPage />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/orders/my/:id" 
+          element={
+            <PrivateRoute>
+              <MyOrderDetailsPage />
             </PrivateRoute>
           } 
         />

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { statesAndDistricts } from "../data/statesDistricts.js";
 import { ShoppingBag, MapPin, Phone, User, CreditCard, Shield } from "lucide-react";
 import { useCartStore } from "./cartStore.js";
 
 const PaymentPage = () => {
+  const navigate = useNavigate();
   const { cartItems, totalAmount } = useCartStore();
   
   const [formData, setFormData] = useState({
@@ -95,12 +97,8 @@ const PaymentPage = () => {
       return;
     }
     
-    setIsProcessing(true);
-    // Razorpay integration will go here
-    setTimeout(() => {
-      alert("✅ Proceeding to payment...");
-      setIsProcessing(false);
-    }, 1000);
+    // Redirect to Razorpay checkout page
+    navigate("/checkout");
   };
 
   const handleUseCurrentLocation = () => {
@@ -391,7 +389,7 @@ const PaymentPage = () => {
                     Processing...
                   </span>
                 ) : (
-                  "Proceed to Payment"
+                  "💳 Proceed to Razorpay Checkout"
                 )}
               </button>
 
