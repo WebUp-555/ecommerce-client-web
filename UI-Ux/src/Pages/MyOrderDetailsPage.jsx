@@ -114,21 +114,14 @@ function MyOrderDetailsPage() {
               <h3>Payment</h3>
               <div className="meta-grid">
                 <div>
-                  <p className="label">Razorpay Order</p>
-                  <p className="value mono small">{order.razorpayOrderId || "-"}</p>
-                </div>
-                <div>
-                  <p className="label">Payment ID</p>
-                  <p className="value mono small">{order.razorpayPaymentId || "Pending"}</p>
-                </div>
-                <div>
-                  <p className="label">Signature</p>
+                  <p className="label">Transaction ID</p>
                   <p className="value mono small">
-                    {order.razorpaySignature ? `${order.razorpaySignature.slice(0, 12)}...` : "-"}
+                    {order.razorpayPaymentId || order.paymentId || "Pending"}
                   </p>
                 </div>
               </div>
             </section>
+
           </div>
         )}
       </div>

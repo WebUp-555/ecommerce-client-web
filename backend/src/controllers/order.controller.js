@@ -19,6 +19,21 @@ export const createPaymentOrderFromCart = asyncHandler(async (req, res) => {
   const userId = req.user?._id;
   if (!userId) throw new ApiError(401, "Unauthorized");
 
+  // ✅ NEW: shippingAddress from frontend
+  const { shippingAddress } = req.body;
+
+  if (
+    !shippingAddress ||
+    !shippingAddress.name ||
+    !shippingAddress.phone ||
+    !shippingAddress.address ||
+    !shippingAddress.pincode ||
+    !shippingAddress.city ||
+    !shippingAddress.state
+  ) {
+    throw new ApiError(400, "Shipping address is required");
+  }
+
   const cart = await Cart.findOne({ user: userId }).populate("items.product");
   if (!cart || cart.items.length === 0) throw new ApiError(400, "Cart is empty");
 
@@ -26,7 +41,7 @@ export const createPaymentOrderFromCart = asyncHandler(async (req, res) => {
   const itemsForOrder = [];
 
   for (const item of cart.items) {
-    const product = item.product; // populated product
+    const product = item.product;
     if (!product) throw new ApiError(404, "Product not found in cart");
 
     const qty = Number(item.quantity);
@@ -45,7 +60,7 @@ export const createPaymentOrderFromCart = asyncHandler(async (req, res) => {
   if (amount <= 0) throw new ApiError(400, "Invalid amount");
 
   const razorpayOrder = await razorpay.orders.create({
-    amount: amount * 100, // paise
+    amount: amount * 100,
     currency: "INR",
     receipt: `rcpt_${Date.now()}`,
   });
@@ -53,7 +68,8 @@ export const createPaymentOrderFromCart = asyncHandler(async (req, res) => {
   const dbOrder = await Order.create({
     user: userId,
     items: itemsForOrder,
-    amount, // rupees
+    amount,
+    shippingAddress, // ✅ NEW LINE
     status: "pending_payment",
     razorpayOrderId: razorpayOrder.id,
   });

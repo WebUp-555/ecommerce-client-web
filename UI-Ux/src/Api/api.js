@@ -36,9 +36,9 @@ api.interceptors.response.use(
  * POST /api/v1/orders/paynow
  * Returns: { orderId, razorpayOrderId, amount, currency, key }
  */
-export const payNow = async () => {
+export const payNow = async (shippingAddress) => {
   try {
-    const response = await api.post('/orders/paynow', {});
+    const response = await api.post('/orders/paynow', { shippingAddress });
     return response.data?.data ?? response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || 'Failed to initiate payment');

@@ -25,10 +25,10 @@ export default function CartPage() {
     (total, item) => total + item.price * item.quantity,
     0
   );
-  const shipping = subtotal > 500 ? 0 : 50;
-  const tax = +(subtotal * 0.05).toFixed(2);
-  const discount = subtotal > 1000 ? 100 : 0;
-  const total = subtotal + shipping + tax - discount;
+  const shipping = 0; // No shipping charge
+  const tax = 0; // No tax applied
+  const discount = 0; // No discounts or extra adjustments
+  const total = subtotal; // Total matches DB price only
 
   if (loading && cartItems.length === 0) {
     return (
@@ -128,8 +128,8 @@ export default function CartPage() {
             <div className="text-sm text-gray-300 space-y-2">
               <p>Subtotal: ₹{subtotal.toFixed(2)}</p>
               <p>Shipping: ₹{shipping}</p>
-              <p>Tax (5%): ₹{tax}</p>
-              <p>Discount: -₹{discount}</p>
+              <p>Tax: ₹{tax}</p>
+              <p>Discount: ₹{discount}</p>
               <hr className="my-2 border-gray-600" />
               <p className="text-lg text-white font-bold">Total: ₹{total.toFixed(2)}</p>
             </div>

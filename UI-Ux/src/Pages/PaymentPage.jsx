@@ -73,9 +73,9 @@ const PaymentPage = () => {
   // Calculate order summary from cart
   useEffect(() => {
     const subtotal = totalAmount || cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const shipping = subtotal > 500 ? 0 : 50;
-    const tax = Math.round(subtotal * 0.18); // 18% GST
-    const total = subtotal + shipping + tax;
+    const shipping = 0; // No extra shipping charges
+    const tax = 0; // No tax applied
+    const total = subtotal; // Total matches DB price only
     
     setOrderSummary({
       subtotal,
@@ -97,8 +97,12 @@ const PaymentPage = () => {
       return;
     }
     
-    // Redirect to Razorpay checkout page
-    navigate("/checkout");
+    // Persist shipping for checkout step (state + sessionStorage)
+    const shippingAddress = { ...formData };
+    sessionStorage.setItem("shippingAddress", JSON.stringify(shippingAddress));
+
+    // Redirect to Razorpay checkout page with state
+    navigate("/checkout", { state: { shippingAddress } });
   };
 
   const handleUseCurrentLocation = () => {

@@ -1,27 +1,56 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useCartStore } from './cartStore';
-import { payNow, verifyPayment } from '../api/api';
-import loadRazorpayScript from '../utils/loadRazorpay';
-import './CheckoutPage.css';
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useCartStore } from "./cartStore";
+import { payNow, verifyPayment } from "../api/api";
+import loadRazorpayScript from "../utils/loadRazorpay";
+import "./CheckoutPage.css";
 
 function CheckoutPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+
   const cartItems = useCartStore((state) => state.cartItems);
   const totalAmount = useCartStore((state) => state.totalAmount);
   const clearCart = useCartStore((state) => state.clearCart);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [shippingAddress, setShippingAddress] = useState(null);
 
-  // Calculate subtotal and tax
-  const subtotal = totalAmount;
-  const tax = Math.round(subtotal * 0.18); // 18% GST
-  const grandTotal = subtotal + tax;
+  useEffect(() => {
+    const fromState = location.state?.shippingAddress;
+    const fromStorage = sessionStorage.getItem("shippingAddress");
+    const parsedStorage = fromStorage ? JSON.parse(fromStorage) : null;
+    setShippingAddress(fromState || parsedStorage || null);
+  }, [location.state]);
 
   const handlePayment = async () => {
+    // Ensure shipping address is present (from state or session)
+    let shippingToSend = shippingAddress;
+    if (!shippingToSend) {
+      const stored = sessionStorage.getItem("shippingAddress");
+      const parsed = stored ? JSON.parse(stored) : null;
+      if (parsed) {
+        shippingToSend = parsed;
+        setShippingAddress(parsed);
+      } else {
+        setError("Shipping address is required. Please add delivery details.");
+        navigate("/payment");
+        return;
+      }
+    }
+
+    // Validate required fields before calling backend
+    const requiredFields = ["name", "phone", "address", "pincode", "city", "state"];
+    const missing = requiredFields.filter((key) => !shippingToSend?.[key]?.toString().trim());
+    if (missing.length) {
+      setError("Shipping address is required. Please add delivery details.");
+      navigate("/payment");
+      return;
+    }
+
     if (cartItems.length === 0) {
-      setError('Your cart is empty');
+      setError("Your cart is empty");
       return;
     }
 
@@ -29,32 +58,31 @@ function CheckoutPage() {
     setError(null);
 
     try {
-      // Step 1: Load Razorpay script
+      // ✅ Load Razorpay script
       const scriptLoaded = await loadRazorpayScript();
       if (!scriptLoaded) {
-        throw new Error('Failed to load Razorpay. Please try again.');
+        throw new Error("Failed to load Razorpay. Please try again.");
       }
 
-      // Step 2: Create order on backend
-      const orderData = await payNow();
+      // ✅ Create order on backend (amount comes from backend)
+      const orderData = await payNow(shippingToSend);
       const { orderId, razorpayOrderId, amount, currency, key } = orderData;
 
       if (!window.Razorpay) {
-        throw new Error('Razorpay is not available');
+        throw new Error("Razorpay is not available");
       }
 
-      // Step 3: Open Razorpay modal
       const options = {
-        key: key,
-        amount: amount,
-        currency: currency,
-        name: 'Japanee E-commerce',
+        key,
+        amount,
+        currency,
+        name: "Japanee E-commerce",
         description: `Order #${orderId}`,
         order_id: razorpayOrderId,
+
         handler: async (response) => {
           try {
-            setLoading(true);
-            // Step 4: Verify payment on backend
+            // ✅ Verify payment on backend
             const verifyData = {
               orderId,
               razorpay_order_id: response.razorpay_order_id,
@@ -62,36 +90,45 @@ function CheckoutPage() {
               razorpay_signature: response.razorpay_signature,
             };
 
-            const verifyResponse = await verifyPayment(verifyData);
+            await verifyPayment(verifyData);
 
-            // Step 5: Clear cart and navigate to success
+            // ✅ Clear cart and navigate
             clearCart();
             navigate(`/orders/success/${orderId}`);
           } catch (err) {
-            setError(err.message || 'Payment verification failed');
+            setError(err?.response?.data?.message || err.message || "Payment verification failed");
             setLoading(false);
           }
         },
+
         modal: {
           ondismiss: () => {
             setLoading(false);
-            setError('Payment cancelled');
+            setError("Payment cancelled");
           },
         },
+
+        // ✅ No contact prefill (prevents showing old number on shared laptop)
         prefill: {
-          name: localStorage.getItem('userName') || '',
-          email: localStorage.getItem('userEmail') || '',
+          name: localStorage.getItem("userName") || "",
+          email: localStorage.getItem("userEmail") || "",
         },
-        theme: {
-          color: '#3399cc',
-        },
+
+        theme: { color: "#3399cc" },
       };
 
       const rzp = new window.Razorpay(options);
+
+      // ✅ handle failed payments
+      rzp.on("payment.failed", function () {
+        setLoading(false);
+        setError("Payment failed. Please try again.");
+      });
+
       rzp.open();
     } catch (err) {
-      console.error('Payment error:', err);
-      setError(err.message || 'An error occurred during payment');
+      console.error("Payment error:", err);
+      setError(err?.response?.data?.message || err.message || "An error occurred during payment");
       setLoading(false);
     }
   };
@@ -99,10 +136,9 @@ function CheckoutPage() {
   return (
     <div className="checkout-page">
       <div className="checkout-container">
-        {/* Cart Summary */}
         <div className="checkout-summary">
           <h2>Order Summary</h2>
-          
+
           {error && (
             <div className="error-message">
               <span>⚠️ {error}</span>
@@ -112,16 +148,12 @@ function CheckoutPage() {
           {cartItems.length === 0 ? (
             <div className="empty-cart">
               <p>Your cart is empty</p>
-              <button 
-                onClick={() => navigate('/products')}
-                className="btn-continue-shopping"
-              >
+              <button onClick={() => navigate("/products")} className="btn-continue-shopping">
                 Continue Shopping
               </button>
             </div>
           ) : (
             <>
-              {/* Cart Items */}
               <div className="cart-items-list">
                 {cartItems.map((item) => (
                   <div key={item.id} className="checkout-item">
@@ -137,41 +169,33 @@ function CheckoutPage() {
                 ))}
               </div>
 
-              {/* Price Breakdown */}
+              {/* ✅ Show only actual cart total (backend will charge this) */}
               <div className="price-breakdown">
-                <div className="price-row">
-                  <span>Subtotal</span>
-                  <span>₹{subtotal}</span>
-                </div>
-                <div className="price-row">
-                  <span>GST (18%)</span>
-                  <span>₹{tax}</span>
-                </div>
                 <div className="price-row total">
                   <span>Total Amount</span>
-                  <span>₹{grandTotal}</span>
+                  <span>₹{totalAmount}</span>
                 </div>
               </div>
 
-              {/* Payment Button */}
-              <button
-                onClick={handlePayment}
-                disabled={loading || cartItems.length === 0}
-                className="btn-pay-now"
-              >
-                {loading ? 'Processing...' : `Pay Now (₹${grandTotal})`}
+              <button onClick={handlePayment} disabled={loading} className="btn-pay-now">
+                {loading ? "Processing..." : `Pay Now (₹${totalAmount})`}
               </button>
             </>
           )}
         </div>
 
-        {/* Payment Info Section */}
         <div className="payment-info">
           <h3>💳 Payment Details</h3>
           <div className="info-box">
-            <p><strong>Payment Gateway:</strong> Razorpay</p>
-            <p><strong>Security:</strong> PCI DSS Certified</p>
-            <p><strong>Accepted Methods:</strong> Cards, UPI, Wallets, Netbanking</p>
+            <p>
+              <strong>Payment Gateway:</strong> Razorpay
+            </p>
+            <p>
+              <strong>Security:</strong> PCI DSS Certified
+            </p>
+            <p>
+              <strong>Accepted Methods:</strong> Cards, UPI, Wallets, Netbanking
+            </p>
           </div>
           <div className="info-box">
             <h4>🔒 Safe & Secure</h4>
