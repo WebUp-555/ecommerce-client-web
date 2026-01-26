@@ -16,8 +16,8 @@ const allowedOrigins = [
   "http://127.0.0.1:5174",
 ];
 
-app.use(cors({
-  origin: function (origin, callback) {
+const corsOptions = {
+  origin(origin, callback) {
     // Allow requests with no origin (like Postman) or from allowed origins
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
@@ -26,7 +26,11 @@ app.use(cors({
     }
   },
   credentials: true,
-}));
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
 
 // ✅ Body parsers and static files
 app.use(express.json({ limit: "10kb" }));

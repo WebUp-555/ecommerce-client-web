@@ -1,8 +1,11 @@
 // src/api/axiosInstance.js
 import axios from "axios";
 
+// Prefer env override; fall back to local dev API
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1";
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1",
+  baseURL: apiBaseUrl,
   headers: { "Content-Type": "application/json" },
   withCredentials: true
 });
