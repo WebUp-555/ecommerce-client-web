@@ -45,6 +45,12 @@ function MyOrderDetailsPage() {
     }
   };
 
+  const formatAddress = (addr) => {
+    if (!addr) return "N/A";
+    const parts = [addr.address, addr.city, addr.state, addr.pincode].filter(Boolean);
+    return parts.length ? parts.join(", ") : "N/A";
+  };
+
   const getStatusLabel = (status) => status?.replace(/_/g, " ") || "pending payment";
 
   return (
@@ -107,6 +113,23 @@ function MyOrderDetailsPage() {
                   </div>
                 ))}
                 {!order.items?.length && <p className="item-empty">No items found.</p>}
+              </div>
+            </section>
+
+            <section className="meta-card">
+              <h3>Delivery</h3>
+              <div className="meta-grid">
+                <div>
+                  <p className="label">Recipient</p>
+                  <p className="value">
+                    {order.shippingAddress?.name || "N/A"}
+                    {order.shippingAddress?.phone ? ` (${order.shippingAddress.phone})` : ""}
+                  </p>
+                </div>
+                <div>
+                  <p className="label">Address</p>
+                  <p className="value">{formatAddress(order.shippingAddress)}</p>
+                </div>
               </div>
             </section>
 
