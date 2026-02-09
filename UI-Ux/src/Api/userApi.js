@@ -1,4 +1,5 @@
 import api from "./axiosInstance.js";
+import tokenService from "./tokenService.js";
 
 export const registerUser = async (userData) => {
   try {
@@ -35,6 +36,16 @@ export const logoutUser = async () => {
     return res.data;
   } catch (error) {
     console.log('Logout Error:', error.response?.data);
+    throw error;
+  }
+};
+
+export const refreshAccessToken = async () => {
+  try {
+    const res = await api.post("/users/refresh-token", {}, { withCredentials: true });
+    return res.data;
+  } catch (error) {
+    console.log('Refresh Token Error:', error.response?.data);
     throw error;
   }
 };
