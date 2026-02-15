@@ -15,7 +15,7 @@ const Home = () => {
 
         <Trending />
         </section>
-        <div className="bg-zinc-900 text-white text-center py-20 px-4">
+        <div className="bg-zinc-900 text-white text-center py-12 sm:py-16 px-4">
           <h1 className="text-4xl md:text-5xl font-bold text-red-500 mb-4">
             Welcome to AnimeTees
           </h1>

@@ -10,7 +10,7 @@ import { buildAssetUrl } from "../../utils/imageUrl";
 function AdaptiveHeight() {
   const settings = {
     className: "carousel-slider",
-    dots: true,
+    dots: false,
     infinite: true,
     slidesToShow: 1,
     slidesToScroll: 1,
@@ -21,14 +21,8 @@ function AdaptiveHeight() {
     arrows: false,
     fade: true,
     cssEase: 'cubic-bezier(0.7, 0, 0.3, 1)',
-    appendDots: dots => (
-      <div className="custom-dots">
-        <ul> {dots} </ul>
-      </div>
-    ),
-    customPaging: i => (
-      <div className="custom-dot" />
-    )
+    appendDots: undefined,
+    customPaging: undefined
   };
 
   const fallbackSlides = [
