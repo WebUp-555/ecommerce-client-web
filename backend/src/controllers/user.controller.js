@@ -8,6 +8,7 @@ import e from "express";
 import jwt from "jsonwebtoken";
 import { sendEmail } from "../utils/mailer.js";
 import { Product } from "../models/products.model.js";
+import { Contact } from "../models/contact.model.js";
 
 const generate4DigitCode = () => Math.floor(1000 + Math.random() * 9000).toString();
 const addMinutes = (date, minutes) => new Date(date.getTime() + minutes * 60000);
@@ -471,6 +472,27 @@ export const getRelatedProducts = asyncHandler(async (req, res) => {
   });
 });
 
+export const submitContactForm = asyncHandler(async (req, res) => {
+  const { name, email, subject, message } = req.body; 
+  if (!name || !email || !subject || !message) {
+    throw new ApiError(400, "All fields are required");
+  }
+  const emailverify=await User.findOne({email})
+  if(!emailverify){
+    throw new ApiError(404, "No user found with this email");
+  }
+  
+  const contact = await Contact.create({
+    name,
+    email,
+    subject,
+    message
+  });
+  
+  return res.status(201).json(new ApiResponse(201, contact, "Contact form submitted successfully"));
+});
+
+
 
 export {
   generateAccessTokenAndRefreshToken,
@@ -488,5 +510,7 @@ export {
   addToWishlist,
   removeFromWishlist,
   getWishlist,
-  debugUser
+  debugUser,
+  
+  
 }

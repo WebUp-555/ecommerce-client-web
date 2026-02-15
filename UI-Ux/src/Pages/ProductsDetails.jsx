@@ -8,6 +8,26 @@ import { FaHeart, FaRegHeart } from "react-icons/fa";
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
 const ORIGIN = API_BASE.replace(/\/api\/v1\/?$/, "");
 
+const buildDisplayName = (product) => {
+  const rawName = (product?.name || "").trim();
+  const category = product?.category?.name || product?.category?.slug || product?.category;
+  const hasShirtWord = /tee|t-?shirt|shirt/i.test(rawName);
+
+  if (!rawName) {
+    return category ? `${category} Graphic Tee` : "Anime Graphic Tee";
+  }
+
+  if (rawName.length < 12) {
+    return category ? `${rawName} — ${category} Graphic Tee` : `${rawName} — Anime Graphic Tee`;
+  }
+
+  if (!hasShirtWord) {
+    return `${rawName} Tee`;
+  }
+
+  return rawName;
+};
+
 function buildImageUrl(product) {
   if (!product) return null;
   // Prefer single image field; fallback to first in images[] if it's a plain string
@@ -201,7 +221,7 @@ export default function ProductsDetails() {
                 {imageUrl ? (
                   <img
                     src={imageUrl}
-                    alt={product.name || "Product image"}
+                    alt={buildDisplayName(product) || "Product image"}
                     loading="lazy"
                     className="w-full h-auto max-h-[500px] object-contain rounded-xl bg-zinc-900"
                   />
@@ -217,7 +237,7 @@ export default function ProductsDetails() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                      {product.name}
+                      {buildDisplayName(product)}
                     </h1>
                     {product.category && (
                       <p className="text-red-400 text-sm mt-2 font-semibold tracking-wide">

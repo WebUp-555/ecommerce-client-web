@@ -11,6 +11,7 @@ import AddCategory from './Pages/AddCategory';
 import UpdateProduct from './Pages/UpdateProduct';
 import Banners from "./Pages/Banners.jsx";
 import AdminSignIn from "./Pages/AdminSignIn.jsx";
+import Contacts from "./Pages/Contacts.jsx";
 
 function AppRoutes() {
   const [isAdmin, setIsAdmin] = useState(null);
@@ -66,6 +67,7 @@ function AppRoutes() {
           <Route path="/add-product" element={<AddProduct />} />
           <Route path="/users" element={<Users />} />
           <Route path="/orders" element={<Orders />} />
+          <Route path="/contacts" element={<Contacts />} />
           <Route path="/updateproduct/:id" element={<UpdateProduct />} />
         </Routes>
       </div>

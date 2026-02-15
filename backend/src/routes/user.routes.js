@@ -1,5 +1,5 @@
 import e, { Router } from "express";
-import { register, login, logout, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetails, forgotPassword, addToWishlist, removeFromWishlist, getWishlist, verifyEmailCode, verifyResetCode, resendSignupCode ,getRelatedProducts} from "../controllers/user.controller.js";
+import { register, login, logout, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetails, forgotPassword, addToWishlist, removeFromWishlist, getWishlist, verifyEmailCode, verifyResetCode, resendSignupCode ,getRelatedProducts,submitContactForm} from "../controllers/user.controller.js";
 import { verifyJWT, requireUser } from "../middlewares/auth.middleware.js"
 const router=Router()
 
@@ -18,6 +18,6 @@ router.route("/wishlist").get(verifyJWT, requireUser, getWishlist)
 router.route("/wishlist/add").post(verifyJWT, requireUser, addToWishlist)
 router.route("/wishlist/remove").post(verifyJWT, requireUser, removeFromWishlist)
 router.route("/related-products/:productId").get(getRelatedProducts);
-
+router.route("/contact").post(submitContactForm);
 
 export default router

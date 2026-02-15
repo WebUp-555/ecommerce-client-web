@@ -4,6 +4,34 @@ import { getProducts } from '../../Api/catalogApi';
 import { Link } from 'react-router-dom';
 import { buildProductImageUrl, debugImage } from '../../utils/imageUrl';
 
+const buildDisplayName = (product) => {
+  const rawName = (product?.name || '').trim();
+  const category = product?.category?.name || product?.category?.slug || product?.category;
+  const hasShirtWord = /tee|t-?shirt|shirt/i.test(rawName);
+
+  if (!rawName) {
+    return category ? `${category} Graphic Tee` : 'Anime Graphic Tee';
+  }
+
+  if (rawName.length < 12) {
+    return category ? `${rawName} — ${category} Graphic Tee` : `${rawName} — Anime Graphic Tee`;
+  }
+
+  if (!hasShirtWord) {
+    return `${rawName} Tee`;
+  }
+
+  return rawName;
+};
+
+const buildDisplaySubtitle = (product) => {
+  if (product?.description) return product.description;
+  const category = product?.category?.name || product?.category?.slug || product?.category;
+  return category
+    ? `Premium ${category} graphic tee with bold anime artwork.`
+    : 'Premium cotton graphic tee with bold anime artwork.';
+};
+
 const TrendingShirts = () => {
   const scrollRef = useRef(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,13 +103,18 @@ const TrendingShirts = () => {
               <Link key={p._id || p.id} to={`/product/${p._id || p.id}`} className="min-w-[220px] group">
                 <div className="bg-zinc-800 rounded-xl p-4 transition-all duration-300 hover:shadow-[0_0_20px_rgba(234,21,56,0.6)] hover:scale-105 hover:bg-zinc-750">
                   {url ? (
-                    <img src={url} alt={p.name || 'Product image'} loading="lazy" className="w-full h-48 object-contain rounded-md bg-zinc-900" />
+                    <img src={url} alt={buildDisplayName(p) || 'Product image'} loading="lazy" className="w-full h-48 object-contain rounded-md bg-zinc-900" />
                   ) : (
                     <div className="w-full h-48 flex items-center justify-center text-xs text-gray-400 bg-zinc-900 rounded-md">
                       No Image
                     </div>
                   )}
-                  <div className="mt-2 text-sm group-hover:text-red-400 transition-colors duration-300">{p.name}</div>
+                  <div className="mt-2 text-sm group-hover:text-red-400 transition-colors duration-300">
+                    {buildDisplayName(p)}
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1 line-clamp-2">
+                    {buildDisplaySubtitle(p)}
+                  </div>
                 </div>
               </Link>
             );

@@ -3,6 +3,34 @@ import { Link, useSearchParams } from "react-router-dom";
 import { getProducts } from "../Api/catalogApi";
 import { buildProductImageUrl, debugImage } from "../utils/imageUrl";
 
+const buildDisplayName = (product) => {
+  const rawName = (product?.name || "").trim();
+  const category = product?.category?.name || product?.category?.slug || product?.category;
+  const hasShirtWord = /tee|t-?shirt|shirt/i.test(rawName);
+
+  if (!rawName) {
+    return category ? `${category} Graphic Tee` : "Anime Graphic Tee";
+  }
+
+  if (rawName.length < 12) {
+    return category ? `${rawName} — ${category} Graphic Tee` : `${rawName} — Anime Graphic Tee`;
+  }
+
+  if (!hasShirtWord) {
+    return `${rawName} Tee`;
+  }
+
+  return rawName;
+};
+
+const buildDisplaySubtitle = (product) => {
+  if (product?.description) return product.description;
+  const category = product?.category?.name || product?.category?.slug || product?.category;
+  return category
+    ? `Premium ${category} graphic tee with bold anime artwork.`
+    : "Premium cotton graphic tee with bold anime artwork.";
+};
+
 export default function Products() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +76,12 @@ export default function Products() {
                   No Image
                 </div>
               )}
-              <div className="text-white text-sm group-hover:text-red-400 transition-colors duration-300">{p.name}</div>
+              <div className="text-white text-sm group-hover:text-red-400 transition-colors duration-300">
+                {buildDisplayName(p)}
+              </div>
+              <div className="text-gray-400 text-xs mt-1 line-clamp-2">
+                {buildDisplaySubtitle(p)}
+              </div>
             </div>
           </Link>
         );

@@ -43,9 +43,20 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    const requestUrl = originalRequest?.url || "";
+    const skipRefreshPaths = [
+      "/users/login",
+      "/users/register",
+      "/users/refresh-token",
+      "/users/verify-email",
+      "/users/register/resend-code",
+      "/users/forgot-password",
+      "/users/reset-password"
+    ];
+    const shouldSkipRefresh = skipRefreshPaths.some((path) => requestUrl.includes(path));
     
     // If 401 error and not already retried, try to refresh token
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !shouldSkipRefresh) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -82,7 +93,7 @@ api.interceptors.response.use(
         // Refresh failed, clear localStorage and redirect to login
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        window.location.href = '/login';
+        window.location.href = '/signin';
         
         return Promise.reject(refreshError);
       }

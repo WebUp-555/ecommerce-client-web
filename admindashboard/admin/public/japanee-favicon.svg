@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Japanee logo">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#111" />
+      <stop offset="1" stop-color="#202020" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="64" height="64" rx="10" fill="url(#g)" />
+  <circle cx="32" cy="32" r="22" fill="#e11924" />
+  <path fill="#fff" d="M18 18h8v20.5c0 4-2.6 7.5-7.6 7.5H14v-6h2c1.8 0 2-1.2 2-2.5V18Zm18.5 0h7l6.5 28h-7l-1-5.2h-4.9L36 46h-7l7.5-28Zm5.9 17.8L40 24.4 37.4 35.8h5z" />
+</svg>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FaEnvelope, FaPhone, FaMapMarkerAlt, FaDiscord, FaTwitter, FaInstagram } from 'react-icons/fa';
+import { submitContactForm } from '../../Api/userApi';
 
 const ContactUs = () => {
   const [formData, setFormData] = useState({
@@ -8,17 +9,32 @@ const ContactUs = () => {
     subject: '',
     message: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Add your form submission logic here
-    console.log('Form submitted:', formData);
-    alert('Message sent! We\'ll get back to you soon.');
-    setFormData({ name: '', email: '', subject: '', message: '' });
+    setError('');
+    setSuccess('');
+    setIsSubmitting(true);
+    try {
+      await submitContactForm(formData);
+      setSuccess("Message sent! We'll get back to you soon.");
+      setFormData({ name: '', email: '', subject: '', message: '' });
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+        err?.message ||
+        'Failed to send message. Please try again.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -95,6 +111,16 @@ const ContactUs = () => {
           {/* Contact Form */}
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit} className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-8 space-y-6">
+              {success && (
+                <div className="rounded-lg border border-green-700 bg-green-900/40 text-green-300 px-4 py-3 text-sm">
+                  {success}
+                </div>
+              )}
+              {error && (
+                <div className="rounded-lg border border-red-700 bg-red-900/40 text-red-300 px-4 py-3 text-sm">
+                  {error}
+                </div>
+              )}
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
                   <label htmlFor="name" className="text-sm font-medium text-zinc-200">
@@ -163,9 +189,12 @@ const ContactUs = () => {
 
               <button
                 type="submit"
-                className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg transition shadow-lg shadow-red-500/20"
+                disabled={isSubmitting}
+                className={`w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg transition shadow-lg shadow-red-500/20 ${
+                  isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
+                }`}
               >
-                Send Message
+                {isSubmitting ? 'Sending...' : 'Send Message'}
               </button>
 
               <p className="text-xs text-center text-zinc-400">

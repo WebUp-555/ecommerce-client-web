@@ -1,6 +1,6 @@
 import express from "express";
 import { verifyJWT, requireAdmin, requireAdminOrigin } from "../middlewares/auth.middleware.js";
-import { adminLogin, adminLogout, getAllUsers, getUserById, addProduct, addCategory, deleteProduct, deleteUserById, getAllCategories, getProductById, getAllProducts, updateProduct, createBanner, getAllBanners, updateBanner, deleteBanner } from "../controllers/admin.controller.js";
+import { adminLogin, adminLogout, getAllUsers, getUserById, addProduct, addCategory, deleteProduct, deleteUserById, getAllCategories, getProductById, getAllProducts, updateProduct, createBanner, getAllBanners, updateBanner, deleteBanner, getAllContacts, deleteContact } from "../controllers/admin.controller.js";
 
 import multer from "multer";
 
@@ -35,5 +35,9 @@ router.get("/banners", verifyJWT, requireAdmin, getAllBanners);
 router.post("/banners", verifyJWT, requireAdmin, upload.single("image"), createBanner);
 router.put("/banners/:id", verifyJWT, requireAdmin, upload.single("image"), updateBanner);
 router.delete("/banners/:id", verifyJWT, requireAdmin, deleteBanner);
+
+// ============ CONTACT ROUTES ============
+router.get("/contacts", verifyJWT, requireAdmin, getAllContacts);
+router.delete("/contacts/:id", verifyJWT, requireAdmin, deleteContact);
 
 export default router;

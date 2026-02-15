@@ -147,4 +147,15 @@ export const deleteBanner = async (id) => {
   return response.data;
 };
 
+// ============ CONTACT APIs ============
+export const getAllContacts = async () => {
+  const response = await api.get('/admin/contacts');
+  return response.data;
+};
+
+export const deleteContact = async (id) => {
+  const response = await api.delete(`/admin/contacts/${id}`);
+  return response.data;
+};
+
 export default api;

@@ -69,3 +69,8 @@ export const resetPasswordWithCode = async (email, code, newPassword) => {
   const res = await api.post("/users/reset-password", { email, code, newPassword });
   return res.data;
 };
+
+export const submitContactForm = async (payload) => {
+  const res = await api.post("/users/contact", payload);
+  return res.data;
+};

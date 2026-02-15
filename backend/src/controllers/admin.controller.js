@@ -6,6 +6,7 @@ import { Product } from "../models/products.model.js";
 import { Category } from "../models/category.model.js";
 import { Cart } from "../models/addToCart.model.js";
 import { Banner } from "../models/banner.model.js";
+import { Contact } from "../models/contact.model.js";
 
 import mongoose from "mongoose";
 
@@ -256,6 +257,22 @@ export const createBanner = asyncHandler(async (req, res) => {
 export const getAllBanners = asyncHandler(async (_req, res) => {
   const banners = await Banner.find().sort({ order: 1, createdAt: -1 }).lean();
   res.json({ success: true, banners });
+});
+
+// 📬 Get all contact submissions (admin)
+export const getAllContacts = asyncHandler(async (_req, res) => {
+  const contacts = await Contact.find().sort({ createdAt: -1 }).lean();
+  res.json({ success: true, contacts });
+});
+
+// 🗑️ Delete a contact submission (admin)
+export const deleteContact = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const contact = await Contact.findByIdAndDelete(id);
+  if (!contact) {
+    throw new ApiError(404, "Contact not found");
+  }
+  res.json({ success: true, message: "Contact deleted successfully" });
 });
 
 // 🏠 Get active banners (public)
