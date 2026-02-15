@@ -8,6 +8,7 @@ import "./Navbar.css";
 const Navbar = () => {
   // Categories removed from navbar per request.
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -50,11 +51,19 @@ const Navbar = () => {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [location.pathname]);
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setIsLoggedIn(false);
     window.location.href = "/signin";
+  };
+
+  const handleNavClick = () => {
+    setIsMenuOpen(false);
   };
 
   return (
@@ -71,21 +80,21 @@ const Navbar = () => {
         </Link>
       </div>
 
-      <ul className="nav-links">
-        <li><Link to="/" className={isActive("/") ? "active" : ""}>Home</Link></li>
-        <li><Link to="/products" className={isActive("/products") ? "active" : ""}>Products</Link></li>
-        <li><a href="/#about" onClick={(e) => handleSmoothScroll(e, 'about')}>About</a></li>
-        <li><a href="/#services" onClick={(e) => handleSmoothScroll(e, 'services')}>Service</a></li>
-        <li><a href="/#contact" onClick={(e) => handleSmoothScroll(e, 'contact')}>Contact Us</a></li>
-        {isLoggedIn && (
-          <li>
-            <Link to="/wishlist" aria-label="View wishlist" className="wishlist-link">
+      <div className={`nav-overlay ${isMenuOpen ? "show" : ""}`} onClick={() => setIsMenuOpen(false)} />
+
+      <ul className={`nav-links ${isMenuOpen ? "open" : ""}`}>
+        <li><Link to="/" onClick={handleNavClick} className={isActive("/") ? "active" : ""}>Home</Link></li>
+        <li><Link to="/products" onClick={handleNavClick} className={isActive("/products") ? "active" : ""}>Products</Link></li>
+        <li><a href="/#about" onClick={(e) => { handleSmoothScroll(e, 'about'); handleNavClick(); }}>About</a></li>
+        <li><a href="/#services" onClick={(e) => { handleSmoothScroll(e, 'services'); handleNavClick(); }}>Service</a></li>
+        <li><a href="/#contact" onClick={(e) => { handleSmoothScroll(e, 'contact'); handleNavClick(); }}>Contact Us</a></li>
+        <li className="nav-icons">
+          {isLoggedIn && (
+            <Link to="/wishlist" onClick={handleNavClick} aria-label="View wishlist" className="wishlist-link">
               <FaHeart className="wishlist-icon" />
             </Link>
-          </li>
-        )}
-        <li>
-          <Link to="/cart" aria-label="View cart">
+          )}
+          <Link to="/cart" onClick={handleNavClick} aria-label="View cart" className="cart-link">
             <img
               src="/Cart.png"
               alt="Cart"
@@ -97,6 +106,17 @@ const Navbar = () => {
       </ul>
       
       <div className="navbar-right">
+        <button
+          type="button"
+          className="menu-toggle"
+          aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={isMenuOpen}
+          onClick={() => setIsMenuOpen((prev) => !prev)}
+        >
+          <span className="menu-bar" />
+          <span className="menu-bar" />
+          <span className="menu-bar" />
+        </button>
         {!isLoggedIn && (
           <Link to="/signin">
             <button className="sign-in-btn">

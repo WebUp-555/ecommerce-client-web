@@ -10,6 +10,39 @@ nav {
   padding-right: 25px;
 }
 
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.menu-toggle {
+  display: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #1b1b1d;
+  border: 1px solid #2c2c2f;
+  cursor: pointer;
+  padding: 8px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+}
+
+.menu-bar {
+  display: block;
+  height: 2px;
+  width: 100%;
+  background: #fff;
+  border-radius: 2px;
+  transition: transform 0.25s ease;
+}
+
+.nav-overlay {
+  display: none;
+}
+
 /* Rest of your styles stay the same... */
 .nav-links {
   list-style: none;
@@ -19,6 +52,18 @@ nav {
   gap: 30px;
   padding-left: 35%;
   font-family: Arial, sans-serif;
+}
+
+.nav-icons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cart-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .nav-links li a {
@@ -269,10 +314,71 @@ nav {
 
 /* Mobile landscape */
 @media (max-width: 640px) {
+  .menu-toggle {
+    display: flex;
+  }
+
+  .nav-overlay.show {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(2px);
+    z-index: 900;
+  }
+
   .nav-links {
-    padding-left: 2%;
-    gap: 10px;
-    font-size: 13px;
+    position: fixed;
+    top: 64px;
+    left: 12px;
+    right: 12px;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 16px;
+    background: #0f0f10;
+    border: 1px solid #232327;
+    border-radius: 14px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+    font-size: 14px;
+    transform: translateY(-10px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 950;
+    max-height: calc(100vh - 90px);
+    overflow-y: auto;
+  }
+
+  .nav-links li {
+    width: 100%;
+  }
+
+  .nav-links li a {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 8px 6px;
+    border-radius: 10px;
+  }
+
+  .nav-links li a:hover {
+    background: #17171a;
+  }
+
+  .nav-icons {
+    width: 100%;
+    justify-content: flex-start;
+    padding-top: 4px;
+  }
+
+  .nav-links.open {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .nav-links li a {
+    font-size: 14px;
   }
   
   .logo-image {
@@ -298,6 +404,10 @@ nav {
     padding-left: 0;
     gap: 8px;
     font-size: 12px;
+  }
+
+  .nav-icons {
+    gap: 10px;
   }
   
   .logo-image {

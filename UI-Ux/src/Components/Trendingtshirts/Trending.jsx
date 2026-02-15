@@ -70,17 +70,20 @@ const TrendingShirts = () => {
   if (error) return <div className="bg-[#111112] text-white p-6 text-center"><p className="text-red-500">{error}</p></div>;
 
   return (
-    <div className="bg-[#111112] text-white p-6">
+    <div className="bg-[#111112] text-white p-4 sm:p-6">
       {/* Heading & Search */}
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-3xl font-bold">Trending T-Shirts</h2>
-        <div className="relative">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-bold">Trending T-Shirts</h2>
+          <p className="text-xs text-gray-400 mt-1 sm:hidden">Swipe to explore →</p>
+        </div>
+        <div className="relative w-full sm:w-auto">
           <input
             type="text"
             placeholder="Search T-Shirts..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-zinc-800 text-white px-4 py-2 pr-10 rounded-lg border border-zinc-600 focus:outline-none focus:ring-2 focus:ring-red-500"
+            className="w-full sm:w-auto bg-zinc-800 text-white px-4 py-2 pr-10 rounded-lg border border-zinc-600 focus:outline-none focus:ring-2 focus:ring-red-500"
           />
           <Search className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
         </div>
@@ -88,24 +91,24 @@ const TrendingShirts = () => {
 
       {/* Scroll Buttons */}
       <div className="relative">
-        <button onClick={() => scroll('left')} className="absolute z-10 left-0 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 p-2 rounded-full hover:bg-opacity-80">
+        <button onClick={() => scroll('left')} className="absolute z-10 left-0 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 p-2 rounded-full hover:bg-opacity-80 hidden sm:flex">
           <ChevronLeft size={24} />
         </button>
-        <button onClick={() => scroll('right')} className="absolute z-10 right-0 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 p-2 rounded-full hover:bg-opacity-80">
+        <button onClick={() => scroll('right')} className="absolute z-10 right-0 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 p-2 rounded-full hover:bg-opacity-80 hidden sm:flex">
           <ChevronRight size={24} />
         </button>
 
         {/* Shirt Cards */}
-        <div ref={scrollRef} className="flex overflow-x-auto gap-6 py-4 px-2 no-scrollbar scroll-smooth">
+        <div ref={scrollRef} className="flex overflow-x-auto gap-4 sm:gap-6 py-4 px-1 sm:px-2 no-scrollbar scroll-smooth snap-x snap-mandatory">
           {filteredProducts.slice(0, 8).map((p) => {
             const url = buildImg(p);
             return (
-              <Link key={p._id || p.id} to={`/product/${p._id || p.id}`} className="min-w-[220px] group">
-                <div className="bg-zinc-800 rounded-xl p-4 transition-all duration-300 hover:shadow-[0_0_20px_rgba(234,21,56,0.6)] hover:scale-105 hover:bg-zinc-750">
+              <Link key={p._id || p.id} to={`/product/${p._id || p.id}`} className="min-w-[180px] sm:min-w-[220px] group snap-start">
+                <div className="bg-zinc-800 rounded-xl p-3 sm:p-4 transition-all duration-300 hover:shadow-[0_0_20px_rgba(234,21,56,0.6)] hover:scale-105 hover:bg-zinc-750">
                   {url ? (
-                    <img src={url} alt={buildDisplayName(p) || 'Product image'} loading="lazy" className="w-full h-48 object-contain rounded-md bg-zinc-900" />
+                    <img src={url} alt={buildDisplayName(p) || 'Product image'} loading="lazy" className="w-full h-40 sm:h-48 object-contain rounded-md bg-zinc-900" />
                   ) : (
-                    <div className="w-full h-48 flex items-center justify-center text-xs text-gray-400 bg-zinc-900 rounded-md">
+                    <div className="w-full h-40 sm:h-48 flex items-center justify-center text-xs text-gray-400 bg-zinc-900 rounded-md">
                       No Image
                     </div>
                   )}

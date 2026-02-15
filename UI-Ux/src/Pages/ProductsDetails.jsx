@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { getProductById, addToWishlist, removeFromWishlist, getWishlist, getRelatedProducts } from "../Api/catalogApi";
 import { useCartStore } from "./cartStore";
 import { FaHeart, FaRegHeart } from "react-icons/fa";
@@ -322,70 +322,58 @@ export default function ProductsDetails() {
           </div>
         </div>
 
-        {/* More to Explore Section */}
-        {!relatedLoading && relatedProducts.length > 0 && (
-          <div className="mt-16">
-            <h2 className="text-3xl font-bold text-white mb-8">
-              <span className="bg-gradient-to-r from-red-500 to-red-400 bg-clip-text text-transparent">
-                More to Explore
+        {/* More to Explore */}
+        <div className="mt-12">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-2xl font-bold text-white">More to Explore</h2>
+              <p className="text-xs text-gray-400 mt-1 sm:hidden">Swipe to explore →</p>
+            </div>
+            {product?.category && (
+              <span className="text-sm text-red-400 hidden sm:block">
+                {product.category.name || product.category}
               </span>
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {relatedProducts.map((relatedProduct) => {
-                const relatedImageUrl = buildImageUrl(relatedProduct);
-                return (
-                  <div
-                    key={relatedProduct._id}
-                    onClick={() => navigate(`/product/${relatedProduct._id}`)}
-                    className="bg-zinc-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-[0_0_20px_rgba(234,21,56,0.3)] transition-all duration-300 hover:scale-105 cursor-pointer group"
-                  >
-                    {/* Product Image */}
-                    <div className="relative overflow-hidden bg-zinc-900 h-64">
-                      {relatedImageUrl ? (
-                        <img
-                          src={relatedImageUrl}
-                          alt={relatedProduct.name}
-                          loading="lazy"
-                          className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400">
-                          No image
-                        </div>
-                      )}
-                    </div>
+            )}
+          </div>
 
-                    {/* Product Info */}
-                    <div className="p-4 text-white">
-                      <h3 className="font-bold text-lg mb-2 line-clamp-2 text-gray-100">
-                        {relatedProduct.name}
-                      </h3>
-                      {relatedProduct.category && (
-                        <p className="text-red-400 text-sm mb-3 font-semibold">
-                          {relatedProduct.category.name || relatedProduct.category}
-                        </p>
-                      )}
-                      <div className="flex justify-between items-center">
-                        <p className="text-2xl font-bold text-red-400">
-                          ₹{relatedProduct.price?.toLocaleString()}
-                        </p>
-                        {relatedProduct.stock > 0 ? (
-                          <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">
-                            In Stock
-                          </span>
-                        ) : (
-                          <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded">
-                            Out of Stock
-                          </span>
-                        )}
+          {relatedLoading ? (
+            <div className="text-gray-400">Loading related products...</div>
+          ) : relatedProducts.length === 0 ? (
+            <div className="text-gray-400">No related products available.</div>
+          ) : (
+            <div className="flex overflow-x-auto gap-4 sm:gap-6 py-2 no-scrollbar scroll-smooth snap-x snap-mandatory">
+              {relatedProducts.map((p) => {
+                const img = buildImageUrl(p);
+                return (
+                  <Link
+                    key={p._id}
+                    to={`/product/${p._id}`}
+                    className="min-w-[180px] sm:min-w-[240px] bg-zinc-800 rounded-xl p-3 sm:p-4 snap-start block hover:shadow-[0_0_20px_rgba(234,21,56,0.3)] transition-shadow"
+                  >
+                    {img ? (
+                      <img
+                        src={img}
+                        alt={buildDisplayName(p) || "Related product"}
+                        loading="lazy"
+                        className="w-full h-40 sm:h-48 object-contain rounded-lg bg-zinc-900"
+                      />
+                    ) : (
+                      <div className="w-full h-40 sm:h-48 flex items-center justify-center text-xs text-gray-400 bg-zinc-900 rounded-lg">
+                        No Image
                       </div>
+                    )}
+                    <div className="mt-2 text-sm text-white">
+                      {buildDisplayName(p)}
                     </div>
-                  </div>
+                    <div className="text-xs text-gray-400 mt-1 line-clamp-2">
+                      {p.description || "Premium anime tee with bold artwork."}
+                    </div>
+                  </Link>
                 );
               })}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
