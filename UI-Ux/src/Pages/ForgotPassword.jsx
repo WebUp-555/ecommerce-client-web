@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { sendForgotCode, resetPasswordWithCode } from "../Api/userApi.js";
+import SuccessMessage from "../Components/SuccessMessage";
+import ErrorMessage from "../Components/ErrorMessage";
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -65,7 +67,7 @@ export default function ForgotPassword() {
       try {
         await resetPasswordWithCode(formData.email, formData.code.trim(), formData.newPassword);
         setSuccess("Password reset successfully! Redirecting to login...");
-        setTimeout(() => navigate("/signin"), 1500);
+        setTimeout(() => navigate("/signin", { state: { success: "Password reset successfully. Please sign in." } }), 1500);
       } catch (err) {
         setError(err.response?.data?.message || err.message || "Failed to reset password");
       } finally {
@@ -79,15 +81,11 @@ export default function ForgotPassword() {
       <div className="max-w-md w-full bg-zinc-900 p-8 rounded-xl shadow-2xl">
         <h2 className="text-3xl font-bold text-white mb-6 text-center">Reset Password</h2>
 
-        {error && (
-          <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
+        {error && <ErrorMessage message={error} />}
 
         {success && (
-          <div className="bg-green-500/10 border border-green-500 text-green-500 px-4 py-3 rounded mb-4">
-            {success}
+          <div className="mb-4">
+            <SuccessMessage message={success} />
           </div>
         )}
 

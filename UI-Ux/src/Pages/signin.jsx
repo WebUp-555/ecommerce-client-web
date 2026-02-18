@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { loginUser } from '../Api/userApi';
 import ErrorMessage from '../Components/ErrorMessage';
+import SuccessMessage from '../Components/SuccessMessage';
 
 const SignIn = () => {
   const [emailOrUsername, setEmailOrUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
@@ -19,14 +22,22 @@ const SignIn = () => {
     if (isLogout === 'true') {
       console.log('Logout detected, clearing localStorage on main app');
       localStorage.clear();
+      setSuccess('Logged out successfully.');
       // Remove the query parameter
       window.history.replaceState({}, '', '/signin');
     }
   }, [navigate, searchParams]);
 
+  useEffect(() => {
+    if (location.state?.success) {
+      setSuccess(location.state.success);
+    }
+  }, [location.state]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setIsLoading(true);
 
     try {
@@ -46,8 +57,11 @@ const SignIn = () => {
         
         // Dispatch custom event to notify components that auth is ready
         window.dispatchEvent(new CustomEvent('auth-ready', { detail: { token: accessToken } }));
-        
-        navigate('/', { replace: true });
+
+        setSuccess('Signed in successfully. Redirecting...');
+        setTimeout(() => {
+          navigate('/', { replace: true });
+        }, 900);
       }
     } catch (err) {
       const backendMessage =
@@ -67,12 +81,16 @@ const SignIn = () => {
   };
 
   return (
-    <div className="flex items-center justify-center h-screen bg-black text-white px-4">
-      <div className="bg-zinc-900 bg-opacity-80 p-12 md:p-16 rounded-md w-full max-w-[450px] shadow-xl">
-        
-        <h1 className="text-3xl font-bold mb-8 text-center text-white">Sign In</h1>
+    <div className="min-h-screen flex items-center justify-center bg-black px-4 py-8 text-white sm:py-12">
+      <div className="w-full max-w-[470px] rounded-2xl border border-zinc-800/90 bg-zinc-900/85 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.55)] backdrop-blur-sm sm:p-10 md:p-12">
+        <div className="mb-8 text-center">
+          <p className="mb-2 inline-flex items-center rounded-full border border-zinc-700 bg-zinc-800/80 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.2em] text-zinc-300">Welcome Back</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-white">Sign In</h1>
+          <p className="mt-2 text-sm text-zinc-400">Access your account to continue shopping premium picks.</p>
+        </div>
         
         <form className="space-y-6" onSubmit={handleSubmit}>
+          <SuccessMessage message={success} />
           <ErrorMessage message={error} />
           
           <input
@@ -81,7 +99,7 @@ const SignIn = () => {
             value={emailOrUsername}
             onChange={(e) => setEmailOrUsername(e.target.value)}
             autoComplete="username"
-            className="w-full p-4 bg-zinc-800 border border-zinc-700 rounded text-white placeholder-gray-400 focus:outline-none"
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-800/95 px-4 py-3.5 text-white placeholder-zinc-400 transition-colors focus:border-red-500 focus:outline-none"
             required
           />
           <div className="relative">
@@ -91,7 +109,7 @@ const SignIn = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
-              className="w-full p-4 pr-12 bg-zinc-800 border border-zinc-700 rounded text-white placeholder-gray-400 focus:outline-none" 
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-800/95 px-4 py-3.5 pr-12 text-white placeholder-zinc-400 transition-colors focus:border-red-500 focus:outline-none" 
               required 
             />
             <button
@@ -117,7 +135,7 @@ const SignIn = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className={`w-full bg-red-600 hover:bg-red-700 transition-colors py-3 rounded font-semibold ${
+            className={`w-full rounded-lg bg-red-600 py-3.5 font-semibold transition-all hover:bg-red-700 hover:shadow-[0_10px_30px_rgba(220,38,38,0.35)] ${
               isLoading ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
@@ -125,7 +143,7 @@ const SignIn = () => {
           </button>
         </form>
 
-        <div className="flex justify-between items-center text-sm text-gray-400 mt-4">
+        <div className="mt-5 flex items-center justify-between text-sm text-zinc-400">
           <label className="flex items-center">
             <input type="checkbox" className="mr-2" />
             Remember me
@@ -133,19 +151,19 @@ const SignIn = () => {
           <a href="#" className="hover:underline">Need help?</a>
         </div>
 
-        <p className="mt-8 text-sm text-center text-gray-400">
+        <p className="mt-8 border-t border-zinc-800 pt-6 text-center text-sm text-zinc-400">
           New to Japanee?{' '}
-          <Link to="/signup" className="text-white hover:underline">
+          <Link to="/signup" className="font-medium text-white hover:underline">
             Sign up now
           </Link>
         </p>
 
-        <p className="text-xs text-center text-gray-500 mt-4 leading-5">
+        <p className="mt-4 text-center text-xs leading-5 text-zinc-500">
           This page is protected by Google reCAPTCHA to ensure you're not a bot.
         </p>
 
-        <div className="mt-4 text-center">
-          <Link to="/forgot-password" className="text-red-500 hover:text-red-400 text-sm">
+        <div className="mt-4 border-t border-zinc-800 pt-4 text-center">
+          <Link to="/forgot-password" className="text-sm font-medium text-red-500 hover:text-red-400">
             Forgot Password?
           </Link>
         </div>

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { registerUser, verifyEmailCode, resendSignupCode } from "../Api/userApi.js";
 import ErrorMessage from '../Components/ErrorMessage';
+import SuccessMessage from '../Components/SuccessMessage';
 
 const SignUp = () => {
   const [username, setUsername] = useState("");
@@ -45,7 +46,7 @@ const SignUp = () => {
     setIsLoading(true);
     try {
       await verifyEmailCode(email, code.trim());
-      navigate("/signin");
+      navigate("/signin", { state: { success: "Account created and email verified successfully. Please sign in." } });
     } catch (err) {
       const backendMessage =
         err.response?.data?.message ||
@@ -68,11 +69,15 @@ const SignUp = () => {
   };
 
   return (
-    <div className="flex items-center justify-center h-screen bg-black text-white px-4">
-      <div className="bg-zinc-900 bg-opacity-80 p-12 md:p-16 rounded-md w-full max-w-[450px] shadow-xl">
+    <div className="min-h-screen flex items-center justify-center bg-black text-white px-4 py-8 sm:py-12">
+      <div className="w-full max-w-[470px] rounded-2xl border border-zinc-800/90 bg-zinc-900/85 p-8 sm:p-10 md:p-12 shadow-[0_24px_80px_rgba(0,0,0,0.55)] backdrop-blur-sm">
         {step === 'form' ? (
           <>
-            <h1 className="text-3xl font-bold mb-8 text-center">Sign Up</h1>
+            <div className="mb-8 text-center">
+              <p className="mb-2 inline-flex items-center rounded-full border border-zinc-700 bg-zinc-800/80 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.2em] text-zinc-300">Create Account</p>
+              <h1 className="text-3xl font-semibold tracking-tight">Sign Up</h1>
+              <p className="mt-2 text-sm text-zinc-400">Join Japanee and start your premium shopping journey.</p>
+            </div>
             <form className="space-y-6" onSubmit={handleSubmit}>
               <ErrorMessage message={error} />
               <input
@@ -80,7 +85,7 @@ const SignUp = () => {
                 placeholder="Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full p-4 bg-zinc-800 border border-zinc-700 rounded text-white placeholder-gray-400 focus:outline-none"
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-800/95 px-4 py-3.5 text-white placeholder-zinc-400 transition-colors focus:border-red-500 focus:outline-none"
                 required
               />
               <input
@@ -88,7 +93,7 @@ const SignUp = () => {
                 placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full p-4 bg-zinc-800 border border-zinc-700 rounded text-white placeholder-gray-400 focus:outline-none"
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-800/95 px-4 py-3.5 text-white placeholder-zinc-400 transition-colors focus:border-red-500 focus:outline-none"
                 required
               />
               <div className="relative">
@@ -97,7 +102,7 @@ const SignUp = () => {
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full p-4 pr-12 bg-zinc-800 border border-zinc-700 rounded text-white placeholder-gray-400 focus:outline-none"
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-800/95 px-4 py-3.5 pr-12 text-white placeholder-zinc-400 transition-colors focus:border-red-500 focus:outline-none"
                   required
                 />
                 <button
@@ -123,27 +128,30 @@ const SignUp = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className={`w-full bg-red-600 hover:bg-red-700 transition-colors py-3 rounded font-semibold ${
+                className={`w-full rounded-lg bg-red-600 py-3.5 font-semibold transition-all hover:bg-red-700 hover:shadow-[0_10px_30px_rgba(220,38,38,0.35)] ${
                   isLoading ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >
                 {isLoading ? 'Creating account...' : 'Sign Up'}
               </button>
             </form>
-            <p className="mt-8 text-sm text-center text-gray-400">
+            <p className="mt-8 border-t border-zinc-800 pt-6 text-center text-sm text-zinc-400">
               Already have an account?{' '}
-              <Link to="/signin" className="text-white hover:underline">Sign in</Link>
+              <Link to="/signin" className="font-medium text-white hover:underline">Sign in</Link>
             </p>
           </>
         ) : (
           <>
-            <h1 className="text-3xl font-bold mb-8 text-center">Verify Email</h1>
+            <div className="mb-8 text-center">
+              <p className="mb-2 inline-flex items-center rounded-full border border-zinc-700 bg-zinc-800/80 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.2em] text-zinc-300">Security Check</p>
+              <h1 className="text-3xl font-semibold tracking-tight">Verify Email</h1>
+            </div>
             {success && (
-              <div className="bg-green-500/10 border border-green-500 text-green-500 px-4 py-3 rounded mb-4 text-center">
-                {success}
+              <div className="mb-4">
+                <SuccessMessage message={success} />
               </div>
             )}
-            <p className="text-gray-400 text-sm mb-6 text-center">We sent a 4-digit code to {email}. Enter it below to verify.</p>
+            <p className="mb-6 text-center text-sm text-zinc-400">We sent a 4-digit code to {email}. Enter it below to verify.</p>
             <form className="space-y-6" onSubmit={handleVerify}>
               <ErrorMessage message={error} />
               <input
@@ -154,26 +162,26 @@ const SignUp = () => {
                 placeholder="4-digit code"
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ''))}
-                className="w-full p-4 bg-zinc-800 border border-zinc-700 rounded text-white placeholder-gray-400 focus:outline-none tracking-widest text-center"
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-800/95 px-4 py-3.5 text-center tracking-[0.4em] text-white placeholder-zinc-400 transition-colors focus:border-red-500 focus:outline-none"
                 required
               />
               <button
                 type="submit"
                 disabled={isLoading}
-                className={`w-full bg-red-600 hover:bg-red-700 transition-colors py-3 rounded font-semibold ${
+                className={`w-full rounded-lg bg-red-600 py-3.5 font-semibold transition-all hover:bg-red-700 hover:shadow-[0_10px_30px_rgba(220,38,38,0.35)] ${
                   isLoading ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >
                 {isLoading ? 'Verifying...' : 'Verify & Continue'}
               </button>
             </form>
-            <div className="mt-4 text-center">
-              <button onClick={handleResend} className="text-red-500 hover:text-red-400 text-sm">Resend Code</button>
+            <div className="mt-5 text-center">
+              <button onClick={handleResend} className="text-sm font-medium text-red-500 hover:text-red-400">Resend Code</button>
             </div>
           </>
         )}
 
-        <p className="text-xs text-center text-gray-500 mt-6 leading-5">
+        <p className="mt-7 border-t border-zinc-800 pt-5 text-center text-xs leading-5 text-zinc-500">
           This page is protected by Google reCAPTCHA to ensure you're not a bot.
         </p>
       </div>

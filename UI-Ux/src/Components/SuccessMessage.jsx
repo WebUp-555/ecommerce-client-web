@@ -1,12 +1,12 @@
 import React from 'react';
 
-const ErrorMessage = ({ message }) => {
+const SuccessMessage = ({ message }) => {
   if (!message) return null;
-  
+
   return (
     <div
-      className="flex items-start gap-3 rounded-lg border border-red-500/50 bg-red-500/10 px-4 py-3 text-red-200 shadow-[0_8px_24px_rgba(239,68,68,0.15)]"
-      role="alert"
+      className="flex items-start gap-3 rounded-lg border border-green-500/50 bg-green-500/10 px-4 py-3 text-green-200 shadow-[0_8px_24px_rgba(34,197,94,0.15)]"
+      role="status"
       aria-live="polite"
     >
       <svg
@@ -17,16 +17,15 @@ const ErrorMessage = ({ message }) => {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="mt-0.5 h-4 w-4 shrink-0 text-red-400"
+        className="mt-0.5 h-4 w-4 shrink-0 text-green-400"
         aria-hidden="true"
       >
         <circle cx="12" cy="12" r="10" />
-        <line x1="12" y1="8" x2="12" y2="12" />
-        <line x1="12" y1="16" x2="12.01" y2="16" />
+        <path d="M9 12l2 2 4-4" />
       </svg>
       <span className="block text-sm leading-relaxed">{message}</span>
     </div>
   );
 };
 
-export default ErrorMessage;
+export default SuccessMessage;

@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import SuccessMessage from "../Components/SuccessMessage";
+import ErrorMessage from "../Components/ErrorMessage";
 
 export default function ChangePassword() {
   const navigate = useNavigate();
@@ -78,15 +80,11 @@ export default function ChangePassword() {
           Change Password
         </h2>
 
-        {error && (
-          <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
+        {error && <ErrorMessage message={error} />}
 
         {success && (
-          <div className="bg-green-500/10 border border-green-500 text-green-500 px-4 py-3 rounded mb-4">
-            {success}
+          <div className="mb-4">
+            <SuccessMessage message={success} />
           </div>
         )}
 
