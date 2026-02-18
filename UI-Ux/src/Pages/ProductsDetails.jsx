@@ -54,6 +54,7 @@ export default function ProductsDetails() {
   const [notFound, setNotFound] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [justAddedToCart, setJustAddedToCart] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
@@ -135,6 +136,13 @@ export default function ProductsDetails() {
     }
   }, [successMessage]);
 
+  useEffect(() => {
+    if (justAddedToCart) {
+      const timer = setTimeout(() => setJustAddedToCart(false), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [justAddedToCart]);
+
   const imageUrl = useMemo(() => buildImageUrl(product), [product]);
 
   const handleAddToCart = async () => {
@@ -151,6 +159,7 @@ export default function ProductsDetails() {
     try {
       await addToCart(product, quantity);
       setSuccessMessage("Product added to cart successfully!");
+      setJustAddedToCart(true);
       setQuantity(1); // Reset quantity
     } catch (err) {
       // Error handled by store
@@ -311,11 +320,21 @@ export default function ProductsDetails() {
                 )}
 
                 <button
-                  onClick={handleAddToCart}
+                  onClick={justAddedToCart ? () => navigate('/cart') : handleAddToCart}
                   disabled={product.stock < 1 || addingToCart}
-                  className="w-full md:w-auto px-8 py-3 bg-gradient-to-r from-red-600 to-red-500 text-white font-bold rounded-xl shadow-lg hover:shadow-[0_0_20px_rgba(234,21,56,0.6)] hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  className={`w-full md:w-auto px-8 py-3 text-white font-bold rounded-xl shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${
+                    justAddedToCart
+                      ? 'bg-gradient-to-r from-green-600 to-emerald-500 hover:shadow-[0_0_20px_rgba(34,197,94,0.55)] hover:scale-105'
+                      : 'bg-gradient-to-r from-red-600 to-red-500 hover:shadow-[0_0_20px_rgba(234,21,56,0.6)] hover:scale-105'
+                  }`}
                 >
-                  {addingToCart ? 'Adding...' : product.stock < 1 ? 'Out of Stock' : 'Add to Cart'}
+                  {addingToCart
+                    ? 'Adding...'
+                    : product.stock < 1
+                      ? 'Out of Stock'
+                      : justAddedToCart
+                        ? '✓ Product Added • Check Cart'
+                        : 'Add to Cart'}
                 </button>
               </div>
             </div>

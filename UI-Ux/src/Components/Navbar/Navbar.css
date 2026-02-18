@@ -28,6 +28,13 @@ nav {
   flex-direction: column;
   justify-content: center;
   gap: 5px;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+
+.menu-toggle.active {
+  border-color: #ea1538;
+  background: #241216;
+  box-shadow: 0 0 0 1px rgba(234, 21, 56, 0.2), 0 8px 18px rgba(234, 21, 56, 0.18);
 }
 
 .menu-bar {

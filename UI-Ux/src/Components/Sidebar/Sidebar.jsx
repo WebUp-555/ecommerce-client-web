@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { logoutUser } from '../../Api/userApi';
+import { FaBoxOpen, FaUserEdit, FaLock, FaSignOutAlt } from 'react-icons/fa';
 import './Sidebar.css';
 
 const Sidebar = () => {
@@ -48,8 +49,25 @@ const Sidebar = () => {
 
   return (
     <>
-      <button className="sidebar-toggle" onClick={toggleSidebar}>
-        <span className="hamburger-icon">☰</span>
+      <button
+        className={`sidebar-toggle ${isOpen ? 'active' : ''}`}
+        onClick={toggleSidebar}
+        aria-label="Open account menu"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.9"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="account-icon"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <circle cx="12" cy="9" r="3" />
+          <path d="M6.5 18.5c1.3-2 3.2-3 5.5-3s4.2 1 5.5 3" />
+        </svg>
       </button>
 
       <div className={`sidebar ${isOpen ? 'open' : ''}`}>
@@ -62,19 +80,19 @@ const Sidebar = () => {
           
           <ul className="sidebar-menu">
             <li onClick={handleMyOrders}>
-              <span className="icon">📦</span>
+              <span className="icon"><FaBoxOpen /></span>
               My Orders
             </li>
             <li onClick={handleUpdateDetails}>
-              <span className="icon">👤</span>
+              <span className="icon"><FaUserEdit /></span>
               Update Details
             </li>
             <li onClick={handleChangePassword}>
-              <span className="icon">🔒</span>
+              <span className="icon"><FaLock /></span>
               Change Password
             </li>
             <li onClick={handleLogout} style={{ opacity: isLoggingOut ? 0.6 : 1, pointerEvents: isLoggingOut ? 'none' : 'auto' }}>
-              <span className="icon">🚪</span>
+              <span className="icon"><FaSignOutAlt /></span>
               {isLoggingOut ? 'Logging out...' : 'Logout'}
             </li>
           </ul>

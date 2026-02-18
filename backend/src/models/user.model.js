@@ -34,6 +34,11 @@ const userSchema=new Schema({
     emailVerificationCodeExpires: {
         type: Date
     },
+    pendingEmail: {
+        type: String,
+        lowercase: true,
+        trim: true,
+    },
     passwordResetCode: {
         type: String
     },

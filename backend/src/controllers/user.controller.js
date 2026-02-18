@@ -228,26 +228,144 @@ const getCurrentUser = asyncHandler(async(req, res) => {
 });
 
 const updateAccountDetails = asyncHandler(async(req, res) => {
-  const { username, email } = req.body;
-  
-  if(!username && !email) {
+  const { username, email, currentPassword } = req.body;
+
+  if (!username && !email) {
     throw new ApiError(400, "At least one field is required");
   }
-  
+
+  const currentUser = await User.findById(req.user?._id);
+  if (!currentUser) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const updates = {};
+  let emailVerificationTriggered = false;
+  let verificationTargetEmail = "";
+
+  if (typeof username === "string" && username.trim()) {
+    const normalizedUsername = username.trim().toLowerCase();
+
+    if (normalizedUsername !== currentUser.username) {
+      const existingUsername = await User.findOne({ username: normalizedUsername, _id: { $ne: currentUser._id } });
+      if (existingUsername) {
+        throw new ApiError(409, "Username already exists");
+      }
+      updates.username = normalizedUsername;
+    }
+  }
+
+  if (typeof email === "string" && email.trim()) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (normalizedEmail !== currentUser.email) {
+      if (!currentPassword || !currentPassword.trim()) {
+        throw new ApiError(400, "Current password is required to change email");
+      }
+
+      const isPasswordCorrect = await currentUser.isPasswordCorrect(currentPassword);
+      if (!isPasswordCorrect) {
+        throw new ApiError(401, "Invalid current password");
+      }
+
+      const existingEmail = await User.findOne({ email: normalizedEmail, _id: { $ne: currentUser._id } });
+      if (existingEmail) {
+        throw new ApiError(409, "Email already exists");
+      }
+
+      const code = generate4DigitCode();
+      const expires = addMinutes(new Date(), 10);
+
+      updates.pendingEmail = normalizedEmail;
+      updates.emailVerificationCode = code;
+      updates.emailVerificationCodeExpires = expires;
+      emailVerificationTriggered = true;
+      verificationTargetEmail = normalizedEmail;
+    }
+  }
+
+  if (!Object.keys(updates).length) {
+    throw new ApiError(400, "No changes detected");
+  }
+
   const user = await User.findByIdAndUpdate(
     req.user?._id,
-    {
-      $set: {
-        username,
-        email
-      }
-    },
+    { $set: updates },
     { new: true }
   ).select("-password -refreshToken");
-  
+
+  if (emailVerificationTriggered) {
+    try {
+      await sendEmail(
+        verificationTargetEmail,
+        "Confirm your new email",
+        `<p>Your code to confirm your new email is <b>${updates.emailVerificationCode}</b>. It expires in 10 minutes.</p>`
+      );
+    } catch (e) {
+      throw new ApiError(500, "Failed to send verification code to new email");
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          {
+            user,
+            requiresEmailVerification: true,
+            pendingEmail: verificationTargetEmail
+          },
+          "Verification code sent to your new email. Enter the code to complete email update."
+        )
+      );
+  }
+
   return res
     .status(200)
     .json(new ApiResponse(200, user, "Account details updated successfully"));
+});
+
+const verifyEmailUpdateCode = asyncHandler(async (req, res) => {
+  const { code } = req.body;
+
+  if (!code) {
+    throw new ApiError(400, "Verification code is required");
+  }
+
+  const user = await User.findById(req.user?._id);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  if (!user.pendingEmail || !user.emailVerificationCode || !user.emailVerificationCodeExpires) {
+    throw new ApiError(400, "No pending email change request found");
+  }
+
+  if (new Date(user.emailVerificationCodeExpires) < new Date()) {
+    throw new ApiError(400, "Verification code expired. Please request email change again.");
+  }
+
+  if (user.emailVerificationCode !== String(code).trim()) {
+    throw new ApiError(400, "Invalid verification code");
+  }
+
+  const existingEmail = await User.findOne({ email: user.pendingEmail, _id: { $ne: user._id } });
+  if (existingEmail) {
+    throw new ApiError(409, "Email already exists");
+  }
+
+  user.email = user.pendingEmail;
+  user.pendingEmail = undefined;
+  user.emailVerificationCode = undefined;
+  user.emailVerificationCodeExpires = undefined;
+  user.isEmailVerified = true;
+  await user.save({ validateBeforeSave: false });
+
+  const safeUser = await User.findById(user._id).select("-password -refreshToken");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, safeUser, "Email updated and verified successfully"));
 });
 
 const forgotPassword = asyncHandler(async (req, res) => {
@@ -503,6 +621,7 @@ export {
   changeCurrentPassword,
   getCurrentUser,
   updateAccountDetails,
+  verifyEmailUpdateCode,
   forgotPassword,
   verifyEmailCode,
   verifyResetCode,

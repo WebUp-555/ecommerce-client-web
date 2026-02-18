@@ -108,7 +108,7 @@ const Navbar = () => {
       <div className="navbar-right">
         <button
           type="button"
-          className="menu-toggle"
+          className={`menu-toggle ${isMenuOpen ? 'active' : ''}`}
           aria-label={isMenuOpen ? "Close menu" : "Open menu"}
           aria-expanded={isMenuOpen}
           onClick={() => setIsMenuOpen((prev) => !prev)}

@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../Api/axiosInstance";
 
 export default function UpdateDetails() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: "",
-    email: ""
+    email: "",
+    currentPassword: ""
   });
+  const [initialEmail, setInitialEmail] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [pendingEmail, setPendingEmail] = useState("");
+  const [showVerificationStep, setShowVerificationStep] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -23,20 +28,15 @@ export default function UpdateDetails() {
           return;
         }
 
-        const response = await axios.get(
-          "http://localhost:8000/api/v1/users/current-user",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          }
-        );
+        const response = await api.get("/users/current-user");
 
         const userData = response.data?.data;
         setFormData({
           username: userData?.username || "",
-          email: userData?.email || ""
+          email: userData?.email || "",
+          currentPassword: ""
         });
+        setInitialEmail(userData?.email || "");
       } catch (err) {
         console.error("Failed to load user data:", err);
         setError("Failed to load user data");
@@ -69,6 +69,12 @@ export default function UpdateDetails() {
       return;
     }
 
+    const isEmailChanged = formData.email.trim().toLowerCase() !== initialEmail.trim().toLowerCase();
+    if (isEmailChanged && !formData.currentPassword.trim()) {
+      setError("Current password is required to change email");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -80,24 +86,33 @@ export default function UpdateDetails() {
         return;
       }
 
-      const response = await axios.put(
-        "http://localhost:8000/api/v1/users/update-account",
-        {
-          username: formData.username,
-          email: formData.email
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+      const payload = {
+        username: formData.username,
+        email: formData.email
+      };
+
+      if (isEmailChanged) {
+        payload.currentPassword = formData.currentPassword;
+      }
+
+      const response = await api.put("/users/update-account", payload);
+
+      if (response.data?.data?.requiresEmailVerification) {
+        const pendingTarget = response.data?.data?.pendingEmail || formData.email;
+        setPendingEmail(pendingTarget);
+        setShowVerificationStep(true);
+        setSuccess(response.data?.message || "Verification code sent to your new email.");
+        return;
+      }
 
       // Update localStorage with new user data
       const updatedUser = response.data?.data;
       if (updatedUser) {
         localStorage.setItem("user", JSON.stringify(updatedUser));
+        setInitialEmail(updatedUser?.email || "");
       }
+
+      setFormData((prev) => ({ ...prev, currentPassword: "" }));
 
       setSuccess("Account details updated successfully! Redirecting...");
       setTimeout(() => {
@@ -105,6 +120,44 @@ export default function UpdateDetails() {
       }, 2000);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to update account details");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyEmailChange = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!/^\d{4}$/.test(verificationCode)) {
+      setError("Please enter the 4-digit verification code");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await api.post("/users/verify-email-update", {
+        code: verificationCode.trim()
+      });
+
+      const updatedUser = response.data?.data;
+      if (updatedUser) {
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+        setInitialEmail(updatedUser?.email || "");
+        setFormData((prev) => ({ ...prev, email: updatedUser?.email || prev.email, currentPassword: "" }));
+      }
+
+      setShowVerificationStep(false);
+      setPendingEmail("");
+      setVerificationCode("");
+      setSuccess("Email verified and account updated successfully! Redirecting...");
+
+      setTimeout(() => {
+        navigate("/");
+      }, 1500);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to verify email change");
     } finally {
       setLoading(false);
     }
@@ -156,6 +209,19 @@ export default function UpdateDetails() {
             />
           </div>
 
+          <div>
+            <label className="block text-gray-300 mb-2">Current Password (required if changing email)</label>
+            <input
+              type="password"
+              name="currentPassword"
+              value={formData.currentPassword}
+              onChange={handleChange}
+              autoComplete="current-password"
+              className="w-full px-4 py-3 bg-zinc-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+              placeholder="Enter current password"
+            />
+          </div>
+
           <button
             type="submit"
             disabled={loading}
@@ -164,6 +230,32 @@ export default function UpdateDetails() {
             {loading ? "Updating..." : "Update Details"}
           </button>
         </form>
+
+        {showVerificationStep && (
+          <form onSubmit={handleVerifyEmailChange} className="space-y-4 mt-4 border-t border-zinc-800 pt-4">
+            <p className="text-sm text-zinc-300">
+              Enter the 4-digit code sent to <span className="text-white font-medium">{pendingEmail}</span> to confirm your new email.
+            </p>
+            <input
+              type="tel"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={4}
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value.replace(/[^0-9]/g, ""))}
+              className="w-full px-4 py-3 bg-zinc-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 tracking-widest text-center"
+              placeholder="____"
+              required
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition disabled:bg-gray-600 disabled:cursor-not-allowed"
+            >
+              {loading ? "Verifying..." : "Verify New Email"}
+            </button>
+          </form>
+        )}
 
         <div className="mt-6 text-center">
           <button

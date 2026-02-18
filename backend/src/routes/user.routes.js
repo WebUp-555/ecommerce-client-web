@@ -1,5 +1,5 @@
 import e, { Router } from "express";
-import { register, login, logout, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetails, forgotPassword, addToWishlist, removeFromWishlist, getWishlist, verifyEmailCode, verifyResetCode, resendSignupCode ,getRelatedProducts,submitContactForm} from "../controllers/user.controller.js";
+import { register, login, logout, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetails, verifyEmailUpdateCode, forgotPassword, addToWishlist, removeFromWishlist, getWishlist, verifyEmailCode, verifyResetCode, resendSignupCode ,getRelatedProducts,submitContactForm} from "../controllers/user.controller.js";
 import { verifyJWT, requireUser } from "../middlewares/auth.middleware.js"
 const router=Router()
 
@@ -12,6 +12,7 @@ router.route("/refresh-token").post(refreshAccessToken)
 router.route("/change-password").post(verifyJWT, requireUser, changeCurrentPassword)
 router.route("/current-user").get(verifyJWT, requireUser, getCurrentUser)
 router.route("/update-account").put(verifyJWT, requireUser, updateAccountDetails)
+router.route("/verify-email-update").post(verifyJWT, requireUser, verifyEmailUpdateCode)
 router.route("/forgot-password").post(forgotPassword)
 router.route("/reset-password").post(verifyResetCode)
 router.route("/wishlist").get(verifyJWT, requireUser, getWishlist)
