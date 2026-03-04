@@ -64,7 +64,7 @@ export default function CartPage() {
             <div className="space-y-6">
               {cartItems.map((item) => (
                 <div
-                  key={item.id}
+                  key={item.key}
                   className="bg-zinc-800 p-4 rounded-lg flex gap-4"
                 >
                   <div className="w-36 h-36 bg-white border border-gray-200 overflow-hidden rounded-lg shadow flex-shrink-0">
@@ -73,23 +73,29 @@ export default function CartPage() {
                       alt={item.name}
                       className="w-full h-full object-contain bg-zinc-100"
                       onError={(e) => {
-                        e.target.src = '/placeholder.png';
+                        if (e.currentTarget.dataset.fallbackApplied === 'true') return;
+                        e.currentTarget.dataset.fallbackApplied = 'true';
+                        e.currentTarget.src = '/placeholder.png';
                       }}
                     />
                   </div>
 
                   <div className="flex-1">
                     <h2 className="font-bold text-lg">{item.name}</h2>
-                    <p className="text-sm text-gray-400">
-                      Stock: {item.stock} available
-                    </p>
+                    {item.itemType === 'catalog' ? (
+                      <p className="text-sm text-gray-400">
+                        Stock: {item.stock} available
+                      </p>
+                    ) : (
+                      <p className="text-sm text-gray-400">Custom AI design item</p>
+                    )}
                     <p className="text-red-500 font-semibold mt-1">
                       ₹{item.price} × {item.quantity}
                     </p>
 
                     <div className="flex items-center gap-3 mt-2">
                       <button
-                        onClick={() => decreaseQuantity(item.id)}
+                        onClick={() => decreaseQuantity(item)}
                         disabled={loading}
                         className="bg-zinc-700 text-white px-2 rounded text-lg hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -97,20 +103,24 @@ export default function CartPage() {
                       </button>
                       <span>{item.quantity}</span>
                       <button
-                        onClick={() => increaseQuantity(item.id)}
-                        disabled={loading || item.quantity >= item.stock}
+                        onClick={() => increaseQuantity(item)}
+                        disabled={loading || (item.itemType === 'catalog' && item.quantity >= item.stock)}
                         className="bg-zinc-700 text-white px-2 rounded text-lg hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         +
                       </button>
                     </div>
 
-                    {item.quantity >= item.stock && (
+                    {item.itemType === 'catalog' && item.quantity >= item.stock && (
                       <p className="text-yellow-500 text-xs mt-1">Max stock reached</p>
                     )}
 
                     <button
-                      onClick={() => removeFromCart(item.id)}
+                      onClick={() => removeFromCart(
+                        item.itemType === 'catalog'
+                          ? { itemType: 'catalog', productId: item.productId }
+                          : { itemType: 'ai_generated', designId: item.designId }
+                      )}
                       disabled={loading}
                       className="mt-2 text-sm text-red-400 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
                     >

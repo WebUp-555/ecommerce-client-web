@@ -6,10 +6,33 @@ const orderSchema = new mongoose.Schema(
 
     items: [
       {
-        productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+        itemType: {
+          type: String,
+          enum: ["catalog", "ai_generated"],
+          required: true,
+        },
+        productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+        designId: { type: mongoose.Schema.Types.ObjectId, ref: "Design" },
         title: String,
         price: Number,
         quantity: Number,
+        selectedOptions: {
+          highResolutionExport: { type: Boolean, default: false },
+          customPlacement: { type: Boolean, default: false },
+          backgroundRemoval: { type: Boolean, default: false },
+        },
+        priceSnapshot: {
+          basePrice: { type: Number, default: 0 },
+          discount: { type: Number, default: 0 },
+          aiGenerationFee: { type: Number, default: 0 },
+          backgroundRemovalFee: { type: Number, default: 0 },
+          highResolutionFee: { type: Number, default: 0 },
+          customPlacementFee: { type: Number, default: 0 },
+          finalUnitPrice: { type: Number, default: 0 },
+          currency: { type: String, default: "INR" },
+        },
+        prompt: String,
+        generatedImage: String,
       },
     ],
 

@@ -103,8 +103,11 @@ function MyOrderDetailsPage() {
                 <h3>Items ({order.items?.length || 0})</h3>
               </div>
               <div className="items-list">
-                {order.items?.map((item) => (
-                  <div key={item.productId} className="item-row">
+                {order.items?.map((item, index) => (
+                  <div
+                    key={item._id || item.designId || item.productId || `${order._id}-item-${index}`}
+                    className="item-row"
+                  >
                     <div>
                       <p className="item-title">{item.title}</p>
                       <p className="item-meta">Qty: {item.quantity}</p>

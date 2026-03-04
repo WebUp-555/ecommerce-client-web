@@ -29,6 +29,7 @@ const Sidebar = () => {
     { path: '/add-category', label: 'Add Category' }, // <-- Add this line
     { path: '/users', label: 'Users'},
     { path: '/orders', label: 'Orders' },
+    { path: '/ai-designs', label: 'AI Designs' },
     { path: '/contacts', label: 'Contacts' },
   
   ];

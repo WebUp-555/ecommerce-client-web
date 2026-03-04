@@ -17,11 +17,32 @@ export const useCartStore = create((set, get) => ({
     try {
       const data = await getCart();
       const items = data.cart?.items || [];
+      const previousItems = get().cartItems || [];
+      const previousImageByKey = new Map(previousItems.map((item) => [item.key, item.image]));
 
       const formattedItems = items.map((item) => {
-        let imageUrl = item.product?.image || item.product?.productImage || null;
+        const isAiGenerated = item.itemType === 'ai_generated';
+        const stableKey = item._id
+          ? `cart-${item._id}`
+          : (isAiGenerated
+              ? `ai-${item.design?._id || item.designId || item.id || 'x'}`
+              : `catalog-${item.product?._id || item.productId || item.id || 'x'}`);
+        let imageUrl = item.resolvedImage || (isAiGenerated
+          ? (
+              item.design?.generatedImage ||
+              item.generatedImageSnapshot ||
+              item.design?.printReadyImage ||
+              item.design?.backgroundRemovedImage ||
+              item.design?.originalImage ||
+              null
+            )
+          : (item.product?.image || item.product?.productImage || null));
+
+        if (typeof imageUrl === 'string') {
+          imageUrl = imageUrl.trim();
+        }
         
-        if (imageUrl) {
+        if (imageUrl && !imageUrl.startsWith('data:')) {
           if (imageUrl.startsWith('http')) {
             // Already absolute
           } else if (imageUrl.startsWith('/')) {
@@ -29,18 +50,29 @@ export const useCartStore = create((set, get) => ({
           } else {
             imageUrl = SERVER_URL + '/' + imageUrl;
           }
-        } else {
-          imageUrl = '/placeholder.png';
+        }
+
+        if (!imageUrl) {
+          imageUrl = previousImageByKey.get(stableKey) || '/placeholder.png';
         }
 
         return {
-          id: item.product._id,
-          name: item.product.name,
-          price: item.product.price,
+          key: stableKey,
+          id: isAiGenerated ? item.design?._id : item.product?._id,
+          itemType: item.itemType || 'catalog',
+          productId: item.product?._id || null,
+          designId: item.design?._id || null,
+          name: isAiGenerated ? 'AI Generated Anime T-Shirt' : (item.product?.name || 'Catalog Product'),
+          price: Number(item.priceSnapshot?.finalPrice ?? item.priceSnapshot?.unitPrice ?? item.product?.price ?? 0),
           image: imageUrl,
           quantity: item.quantity,
-          stock: item.product.stock,
-          category: item.product.category,
+          stock: isAiGenerated ? null : item.product?.stock,
+          category: isAiGenerated ? 'ai_generated' : item.product?.category,
+          selectedOptions: item.selectedOptions || {
+            highResolutionExport: false,
+            customPlacement: false,
+            backgroundRemoval: false,
+          },
         };
       });
 
@@ -79,11 +111,23 @@ export const useCartStore = create((set, get) => ({
     await get().fetchCart();
   },
 
-  // Add to cart (adds quantity to existing)
-  addToCart: async (product, quantity = 1) => {
+  // Add to cart (supports both catalog and ai_generated payloads)
+  addToCart: async (payload, quantity = 1) => {
     set({ loading: true, error: null });
     try {
-      await addToCart(product.id || product._id, quantity);
+      let body;
+
+      if (payload?.itemType) {
+        body = payload;
+      } else {
+        body = {
+          itemType: 'catalog',
+          productId: payload?.id || payload?._id,
+          quantity,
+        };
+      }
+
+      await addToCart(body);
       await get().fetchCart();
     } catch (error) {
       set({
@@ -95,10 +139,21 @@ export const useCartStore = create((set, get) => ({
   },
 
   // Remove from cart
-  removeFromCart: async (productId) => {
+  removeFromCart: async (payload) => {
     set({ loading: true, error: null });
     try {
-      await removeFromCart(productId);
+      let body;
+
+      if (payload?.itemType) {
+        body = payload;
+      } else {
+        body = {
+          itemType: 'catalog',
+          productId: payload,
+        };
+      }
+
+      await removeFromCart(body);
       await get().fetchCart();
     } catch (error) {
       set({
@@ -109,19 +164,31 @@ export const useCartStore = create((set, get) => ({
   },
 
   // Increase quantity - add 1
-  increaseQuantity: async (productId) => {
-    const item = get().cartItems.find((i) => i.id === productId);
+  increaseQuantity: async (targetItem) => {
+    const item = get().cartItems.find((i) => i.key === targetItem.key);
     if (!item) return;
 
-    if (item.quantity >= item.stock) {
+    if (item.itemType === 'catalog' && item.quantity >= item.stock) {
       set({ error: 'Insufficient stock available' });
       return;
     }
 
     set({ loading: true, error: null });
     try {
-      // Add 1 to current quantity
-      await addToCart(productId, 1);
+      if (item.itemType === 'catalog') {
+        await addToCart({
+          itemType: 'catalog',
+          productId: item.productId,
+          quantity: 1,
+        });
+      } else {
+        await addToCart({
+          itemType: 'ai_generated',
+          designId: item.designId,
+          quantity: item.quantity + 1,
+          selectedOptions: item.selectedOptions,
+        });
+      }
       await get().fetchCart();
     } catch (error) {
       set({
@@ -132,24 +199,40 @@ export const useCartStore = create((set, get) => ({
   },
 
   // Decrease quantity - remove 1
-  decreaseQuantity: async (productId) => {
-    const item = get().cartItems.find((i) => i.id === productId);
+  decreaseQuantity: async (targetItem) => {
+    const item = get().cartItems.find((i) => i.key === targetItem.key);
     if (!item) return;
 
     // If quantity is 1, remove completely
     if (item.quantity === 1) {
-      await get().removeFromCart(productId);
+      await get().removeFromCart(
+        item.itemType === 'catalog'
+          ? { itemType: 'catalog', productId: item.productId }
+          : { itemType: 'ai_generated', designId: item.designId }
+      );
       return;
     }
 
     set({ loading: true, error: null });
     try {
-      // Add -1 to decrease (backend should handle this)
-      // OR remove and re-add with new quantity
-      await removeFromCart(productId);
-      // Re-add with new quantity (quantity - 1)
       const newQuantity = item.quantity - 1;
-      await addToCart(productId, newQuantity);
+
+      if (item.itemType === 'catalog') {
+        await removeFromCart({ itemType: 'catalog', productId: item.productId });
+        await addToCart({
+          itemType: 'catalog',
+          productId: item.productId,
+          quantity: newQuantity,
+        });
+      } else {
+        await addToCart({
+          itemType: 'ai_generated',
+          designId: item.designId,
+          quantity: newQuantity,
+          selectedOptions: item.selectedOptions,
+        });
+      }
+
       await get().fetchCart();
     } catch (error) {
       set({

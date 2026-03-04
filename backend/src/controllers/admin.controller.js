@@ -1,18 +1,15 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import { User } from "../models/user.model.js";
 import { Product } from "../models/products.model.js";
 import { Category } from "../models/category.model.js";
-import { Cart } from "../models/addToCart.model.js";
 import { Banner } from "../models/banner.model.js";
 import { Contact } from "../models/contact.model.js";
 
-import mongoose from "mongoose";
-
 const ADMIN_ROLE = "admin";
 
-// 🧑‍💼 Admin Login
 export const adminLogin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
@@ -36,9 +33,6 @@ export const adminLogin = asyncHandler(async (req, res) => {
     { expiresIn: process.env.ACCESS_TOKEN_EXPIRY || "1h" }
   );
 
-  // Do NOT set a global cookie to avoid affecting the main site.
-  // Admin dashboard uses Authorization: Bearer <token> from localStorage.
-
   res.status(200).json({
     success: true,
     token,
@@ -46,46 +40,52 @@ export const adminLogin = asyncHandler(async (req, res) => {
   });
 });
 
-// 👥 Get All Users
-export const getAllUsers = asyncHandler(async (req, res) => {
+export const adminLogout = asyncHandler(async (req, res) => {
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    path: "/api/v1/admin",
+  };
+
+  try {
+    res.clearCookie("adminAccessToken", cookieOptions);
+  } catch {}
+
+  try {
+    res.clearCookie("accessToken", cookieOptions);
+  } catch {}
+
+  res.status(200).json({ success: true, message: "Admin logged out successfully" });
+});
+
+export const getAllUsers = asyncHandler(async (_req, res) => {
   const users = await User.find().select("-password -refreshToken");
-  res.status(200).json({
-    success: true,
-    users,
-    message: "All users fetched successfully",
-  });
+  res.status(200).json({ success: true, users, message: "All users fetched successfully" });
 });
 
 export const getUserById = asyncHandler(async (req, res) => {
-  const userId = req.params.id;
-  const user = await User.findById(userId).select("-password -refreshToken");
+  const user = await User.findById(req.params.id).select("-password -refreshToken");
   if (!user) {
     throw new ApiError(404, "User not found");
   }
-  res.status(200).json({
-    success: true,
-    user,
-    message: "User fetched successfully",
-  });
+
+  res.status(200).json({ success: true, user, message: "User fetched successfully" });
 });
 
 export const deleteUserById = asyncHandler(async (req, res) => {
-  const userId = req.params.id;
-  const user = await User.findByIdAndDelete(userId);
+  const user = await User.findByIdAndDelete(req.params.id);
   if (!user) {
     throw new ApiError(404, "User not found");
   }
 
-  res.status(200).json({
-    success: true,
-    message: "User deleted successfully",
-  });
+  res.status(200).json({ success: true, message: "User deleted successfully" });
 });
-  
 
 export const addCategory = asyncHandler(async (req, res) => {
   const { name, description } = req.body;
   const category = await Category.create({ name, description });
+
   res.status(201).json({
     success: true,
     message: "Category added successfully",
@@ -93,14 +93,17 @@ export const addCategory = asyncHandler(async (req, res) => {
   });
 });
 
-// ✅ Add product (supports category name or ObjectId)
 export const addProduct = asyncHandler(async (req, res) => {
-  let { name, description, category, price, stock } = req.body;
+  let { name, description, category, price, stock, discount, type } = req.body;
+
+  if (type && type !== "catalog") {
+    throw new ApiError(400, "Admin can only create catalog products");
+  }
 
   if (category && !mongoose.isValidObjectId(category)) {
     const catDoc = await Category.findOne({ name: category }).lean();
     if (!catDoc) {
-      throw new ApiError(400, 'Invalid category name');
+      throw new ApiError(400, "Invalid category name");
     }
     category = catDoc._id;
   }
@@ -113,94 +116,43 @@ export const addProduct = asyncHandler(async (req, res) => {
   }
 
   const product = await Product.create({
+    type: "catalog",
     name,
     description,
     category,
     price: price ? Number(price) : undefined,
+    discount: discount ? Number(discount) : 0,
     stock: stock ? Number(stock) : undefined,
-    image
+    image,
+    isPublic: true,
   });
 
   res.status(201).json({ success: true, product });
 });
 
-// ✅ Delete product (removes from DB + Cloudinary)
-export const deleteProduct = asyncHandler(async (req, res) => {
+export const updateProduct = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const product = await Product.findById(id);
-  if (!product) {
-    throw new ApiError(404, "Product not found");
-  }
-
-  const imageUrl = product.image || product.productImage;
-  if (imageUrl && /res\.cloudinary\.com/i.test(imageUrl)) {
-    const publicId = imageUrl.split("/").pop().split(".")[0];
-    try { await deleteFromCloudinary(publicId); } catch (_) { /* ignore */ }
-  }
-
-  await Product.findByIdAndDelete(id);
-  res.status(200).json({ success: true, message: "🗑️ Product deleted successfully" });
-});
-
-// 🚪 Admin Logout
-export const adminLogout = asyncHandler(async (req, res) => {
-  // Clear any admin-scoped cookie if it exists (backward compatibility)
-  const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    path: "/api/v1/admin"
-  };
-  try { res.clearCookie("adminAccessToken", cookieOptions); } catch (_) {}
-  try { res.clearCookie("accessToken", cookieOptions); } catch (_) {}
-  res.status(200).json({ success: true, message: "Admin logged out successfully" });
-});
-
-// List all products (public)
-export const getAllProducts = asyncHandler(async (req, res) => {
-  const products = await Product.find()
-    .populate("category", "name slug")
-    .lean();
-  res.json({ success: true, products });
-});
-
-// Single product (public)
-export const getProductById = asyncHandler(async (req, res) => {
-  const product = await Product.findById(req.params.id)
-    .populate("category", "name slug")
-    .lean();
-  if (!product) {
-    throw new ApiError(404, "Product not found");
-  }
-  res.json({ success: true, product });
-});
-
-// List categories (public)
-export const getAllCategories = asyncHandler(async (req, res) => {
-  const categories = await Category.find().lean();
-  res.json({ success: true, categories });
-});
-
-export const updateProduct = asyncHandler(async (req, res) => {  
-  const { id } = req.params;
-  let { name, description, category, price, stock } = req.body;
+  let { name, description, category, price, stock, discount } = req.body;
   const updateData = {};
 
   if (name) updateData.name = name;
   if (description) updateData.description = description;
-  if (price) updateData.price = Number(price);
-  if (stock) updateData.stock = Number(stock);
+  if (price !== undefined) updateData.price = Number(price);
+  if (discount !== undefined) updateData.discount = Number(discount) || 0;
+  if (stock !== undefined) updateData.stock = Number(stock);
+
   if (category) {
     if (!mongoose.isValidObjectId(category)) {
       const catDoc = await Category.findOne({ name: category }).lean();
       if (!catDoc) {
-        throw new ApiError(400, 'Invalid category name');
+        throw new ApiError(400, "Invalid category name");
       }
       updateData.category = catDoc._id;
     } else {
       updateData.category = category;
     }
   }
+
   if (req.file?.secure_url) {
     updateData.image = req.file.secure_url;
   } else if (req.file?.filename) {
@@ -218,7 +170,58 @@ export const updateProduct = asyncHandler(async (req, res) => {
   res.json({ success: true, product: updatedProduct });
 });
 
-// 🎞️ Create a banner (admin)
+export const deleteProduct = asyncHandler(async (req, res) => {
+  const product = await Product.findById(req.params.id);
+  if (!product) {
+    throw new ApiError(404, "Product not found");
+  }
+
+  await Product.findByIdAndDelete(req.params.id);
+  res.status(200).json({ success: true, message: "Product deleted successfully" });
+});
+
+export const getAllProducts = asyncHandler(async (req, res) => {
+  const isAdmin = (req.user?.role || "").toLowerCase() === "admin";
+  const query = isAdmin
+    ? {}
+    : {
+        $and: [
+          {
+            $or: [{ type: "catalog" }, { type: { $exists: false } }, { type: null }],
+          },
+          {
+            $or: [{ isPublic: true }, { isPublic: { $exists: false } }, { isPublic: null }],
+          },
+        ],
+      };
+
+  const products = await Product.find(query).populate("category", "name slug").lean();
+  res.json({ success: true, products });
+});
+
+export const getProductById = asyncHandler(async (req, res) => {
+  const isAdmin = (req.user?.role || "").toLowerCase() === "admin";
+  const product = await Product.findById(req.params.id).populate("category", "name slug").lean();
+
+  if (!product) {
+    throw new ApiError(404, "Product not found");
+  }
+
+  const isCatalogLike = !product.type || product.type === "catalog";
+  const isPublicLike = product.isPublic !== false;
+
+  if (!isAdmin && (!isCatalogLike || !isPublicLike)) {
+    throw new ApiError(404, "Product not found");
+  }
+
+  res.json({ success: true, product });
+});
+
+export const getAllCategories = asyncHandler(async (_req, res) => {
+  const categories = await Category.find().lean();
+  res.json({ success: true, categories });
+});
+
 export const createBanner = asyncHandler(async (req, res) => {
   const { title, subtitle, badge, ctaText, ctaLink, order, active } = req.body;
 
@@ -253,37 +256,16 @@ export const createBanner = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, banner });
 });
 
-// 📋 Get all banners (admin)
 export const getAllBanners = asyncHandler(async (_req, res) => {
   const banners = await Banner.find().sort({ order: 1, createdAt: -1 }).lean();
   res.json({ success: true, banners });
 });
 
-// 📬 Get all contact submissions (admin)
-export const getAllContacts = asyncHandler(async (_req, res) => {
-  const contacts = await Contact.find().sort({ createdAt: -1 }).lean();
-  res.json({ success: true, contacts });
-});
-
-// 🗑️ Delete a contact submission (admin)
-export const deleteContact = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const contact = await Contact.findByIdAndDelete(id);
-  if (!contact) {
-    throw new ApiError(404, "Contact not found");
-  }
-  res.json({ success: true, message: "Contact deleted successfully" });
-});
-
-// 🏠 Get active banners (public)
 export const getActiveBanners = asyncHandler(async (_req, res) => {
-  const banners = await Banner.find({ active: true })
-    .sort({ order: 1, createdAt: -1 })
-    .lean();
+  const banners = await Banner.find({ active: true }).sort({ order: 1, createdAt: -1 }).lean();
   res.json({ success: true, banners });
 });
 
-// ✏️ Update banner (admin)
 export const updateBanner = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { title, subtitle, badge, ctaText, ctaLink, order, active } = req.body;
@@ -313,10 +295,8 @@ export const updateBanner = asyncHandler(async (req, res) => {
   res.json({ success: true, banner });
 });
 
-// 🗑️ Delete banner (admin)
 export const deleteBanner = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const banner = await Banner.findByIdAndDelete(id);
+  const banner = await Banner.findByIdAndDelete(req.params.id);
   if (!banner) {
     throw new ApiError(404, "Banner not found");
   }
@@ -324,108 +304,16 @@ export const deleteBanner = asyncHandler(async (req, res) => {
   res.json({ success: true, message: "Banner deleted successfully" });
 });
 
-
-export const addToCart = asyncHandler(async (req, res) => {
-  const userId = req.user?._id;
-  if (!userId) {
-    throw new ApiError(401, "User not authenticated");
-  }
-
-  let { productId, quantity } = req.body;
-  quantity = Number(quantity) || 0;
-  
-  if (!productId || quantity < 1) {
-    throw new ApiError(400, "Product ID and valid quantity are required");
-  }
-
-  const product = await Product.findById(productId);
-  if (!product) {
-    throw new ApiError(404, "Product not found");
-  }
-
-  let cart = await Cart.findOne({ user: userId });
-  let existingQuantity = 0;
-
-  if (cart) {
-    const existingItem = cart.items.find((item) => item.product.toString() === productId);
-    if (existingItem) {
-      existingQuantity = existingItem.quantity;
-    }
-  }
-
-  // Check total quantity against stock
-  if (product.stock < (quantity + existingQuantity)) {
-    throw new ApiError(400, `Insufficient stock. Available: ${product.stock}, Requested: ${quantity + existingQuantity}`);
-  }
-
-  if (!cart) {
-    cart = await Cart.create({ user: userId, items: [{ product: productId, quantity }] });
-  } else {
-    const itemIndex = cart.items.findIndex((item) => item.product.toString() === productId);
-    if (itemIndex > -1) {
-      cart.items[itemIndex].quantity += quantity;
-    } else {
-      cart.items.push({ product: productId, quantity });
-    }
-    await cart.save();
-  }
-
-  res.status(200).json({ success: true, message: "Product added to cart successfully", cart });
+export const getAllContacts = asyncHandler(async (_req, res) => {
+  const contacts = await Contact.find().sort({ createdAt: -1 }).lean();
+  res.json({ success: true, contacts });
 });
 
-export const removeFromCart = asyncHandler(async (req, res) => {
-  const userId = req.user?._id;
-  if (!userId) {
-    throw new ApiError(401, "User not authenticated");
+export const deleteContact = asyncHandler(async (req, res) => {
+  const contact = await Contact.findByIdAndDelete(req.params.id);
+  if (!contact) {
+    throw new ApiError(404, "Contact not found");
   }
 
-  const { productId } = req.body;
-  if (!productId) {
-    throw new ApiError(400, "Product ID is required");
-  }
-
-  const cart = await Cart.findOne({ user: userId });
-  if (!cart) {
-    throw new ApiError(404, "Cart not found");
-  }
-
-  const initialLength = cart.items.length;
-  cart.items = cart.items.filter((item) => item.product.toString() !== productId);
-
-  if (cart.items.length === initialLength) {
-    throw new ApiError(404, "Product not found in cart");
-  }
-
-  await cart.save();
-  res.status(200).json({ success: true, message: "Product removed from cart successfully", cart });
+  res.json({ success: true, message: "Contact deleted successfully" });
 });
-
-export const getCart = asyncHandler(async (req, res) => {
-  const userId = req.user?._id;
-  if (!userId) {
-    throw new ApiError(401, "User not authenticated");
-  }
-
-  const cart = await Cart.findOne({ user: userId }).populate("items.product");
-  if (!cart) {
-    return res.status(200).json({ success: true, cart: null, totalAmount: 0, items: [] });
-  }
-
-  // Filter out items where product no longer exists
-  const validItems = cart.items.filter(item => item.product != null);
-  
-  const totalAmount = validItems.reduce((sum, item) => {
-    const price = Number(item.product.price) || 0;
-    const qty = Number(item.quantity) || 0;
-    return sum + price * qty;
-  }, 0);
-
-  // Update cart if invalid items were found
-  if (validItems.length !== cart.items.length) {
-    cart.items = validItems;
-    await cart.save();
-  }
-
-  res.status(200).json({ success: true, cart, totalAmount });
-});
-

@@ -79,6 +79,7 @@ function CheckoutPage() {
         name: "Japanee E-commerce",
         description: `Order #${orderId}`,
         order_id: razorpayOrderId,
+        image: "https://razorpay.com/favicon.png",
 
         handler: async (response) => {
           try {
@@ -155,8 +156,8 @@ function CheckoutPage() {
           ) : (
             <>
               <div className="cart-items-list">
-                {cartItems.map((item) => (
-                  <div key={item.id} className="checkout-item">
+                {cartItems.map((item, index) => (
+                  <div key={item.key || item.id || `checkout-item-${index}`} className="checkout-item">
                     <div className="item-details">
                       <h4>{item.name}</h4>
                       <p className="item-quantity">Qty: {item.quantity}</p>

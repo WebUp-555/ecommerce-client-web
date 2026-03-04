@@ -6,6 +6,9 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Cart } from "../models/addToCart.model.js";
+import { Product } from "../models/products.model.js";
+import Design from "../models/design.model.js";
+import { calculateAiGeneratedPrice, calculateCatalogPrice } from "../utils/pricing.js";
 
 /**
  * STATUS FLOW (Final)
@@ -34,27 +37,93 @@ export const createPaymentOrderFromCart = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Shipping address is required");
   }
 
-  const cart = await Cart.findOne({ user: userId }).populate("items.product");
+  const cart = await Cart.findOne({ user: userId })
+    .populate("items.product")
+    .populate("items.design");
   if (!cart || cart.items.length === 0) throw new ApiError(400, "Cart is empty");
 
   let amount = 0;
   const itemsForOrder = [];
 
   for (const item of cart.items) {
-    const product = item.product;
-    if (!product) throw new ApiError(404, "Product not found in cart");
-
     const qty = Number(item.quantity);
     if (!qty || qty <= 0) throw new ApiError(400, "Invalid quantity");
 
-    amount += product.price * qty;
+    if (item.itemType === "catalog") {
+      const product = item.product || (item.product ? await Product.findById(item.product) : null);
+      if (!product) throw new ApiError(404, "Product not found in cart");
 
-    itemsForOrder.push({
-      productId: product._id,
-      title: product.name,
-      price: product.price,
-      quantity: qty,
-    });
+      const pricing = calculateCatalogPrice(product);
+      const lineTotal = pricing.finalPrice * qty;
+      amount += lineTotal;
+
+      itemsForOrder.push({
+        itemType: "catalog",
+        productId: product._id,
+        title: product.name,
+        price: pricing.finalPrice,
+        quantity: qty,
+        selectedOptions: {
+          highResolutionExport: false,
+          customPlacement: false,
+          backgroundRemoval: false,
+        },
+        priceSnapshot: {
+          basePrice: pricing.basePrice,
+          discount: pricing.discount,
+          aiGenerationFee: 0,
+          backgroundRemovalFee: 0,
+          highResolutionFee: 0,
+          customPlacementFee: 0,
+          finalUnitPrice: pricing.finalPrice,
+          currency: pricing.currency,
+        },
+      });
+      continue;
+    }
+
+    if (item.itemType === "ai_generated") {
+      const design = item.design || (item.design ? await Design.findById(item.design) : null);
+      if (!design) throw new ApiError(404, "AI design not found in cart");
+      if (String(design.user) !== String(userId)) {
+        throw new ApiError(403, "Cannot order another user's AI design");
+      }
+      if (design.isLocked) {
+        throw new ApiError(400, "Design is already locked by a previous order");
+      }
+
+      const pricing = calculateAiGeneratedPrice({
+        hasBackgroundRemoval: Boolean(design.backgroundRemovedImage),
+        selectedOptions: item.selectedOptions || {},
+      });
+
+      const lineTotal = pricing.finalPrice * qty;
+      amount += lineTotal;
+
+      itemsForOrder.push({
+        itemType: "ai_generated",
+        designId: design._id,
+        title: "AI Generated Anime T-Shirt",
+        price: pricing.finalPrice,
+        quantity: qty,
+        selectedOptions: pricing.selectedOptions,
+        priceSnapshot: {
+          basePrice: pricing.baseTshirtPrice,
+          discount: 0,
+          aiGenerationFee: pricing.aiGenerationFee,
+          backgroundRemovalFee: pricing.backgroundRemovalFee,
+          highResolutionFee: pricing.highResolutionFee,
+          customPlacementFee: pricing.customPlacementFee,
+          finalUnitPrice: pricing.finalPrice,
+          currency: pricing.currency,
+        },
+        prompt: design.prompt,
+        generatedImage: design.generatedImage,
+      });
+      continue;
+    }
+
+    throw new ApiError(400, "Unsupported cart item type");
   }
 
   if (amount <= 0) throw new ApiError(400, "Invalid amount");
@@ -124,6 +193,23 @@ export const verifyPaymentAndCreateOrder = asyncHandler(async (req, res) => {
   dbOrder.razorpayPaymentId = razorpay_payment_id;
   dbOrder.razorpaySignature = razorpay_signature;
   await dbOrder.save();
+
+  const aiDesignIds = dbOrder.items
+    .filter((item) => item.itemType === "ai_generated" && item.designId)
+    .map((item) => item.designId);
+
+  if (aiDesignIds.length > 0) {
+    await Design.updateMany(
+      { _id: { $in: aiDesignIds }, user: userId },
+      {
+        $set: {
+          isLocked: true,
+          lockedAt: new Date(),
+          lockedOrder: dbOrder._id,
+        },
+      }
+    );
+  }
 
   // ✅ Clear cart after successful payment
   await Cart.findOneAndUpdate({ user: userId }, { $set: { items: [] } });

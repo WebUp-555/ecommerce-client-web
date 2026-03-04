@@ -9,6 +9,9 @@ import jwt from "jsonwebtoken";
 import { sendEmail } from "../utils/mailer.js";
 import { Product } from "../models/products.model.js";
 import { Contact } from "../models/contact.model.js";
+import { Cart } from "../models/addToCart.model.js";
+import Design from "../models/design.model.js";
+import { calculateAiGeneratedPrice, calculateCatalogPrice } from "../utils/pricing.js";
 
 const generate4DigitCode = () => Math.floor(1000 + Math.random() * 9000).toString();
 const addMinutes = (date, minutes) => new Date(date.getTime() + minutes * 60000);
@@ -608,6 +611,266 @@ export const submitContactForm = asyncHandler(async (req, res) => {
   });
   
   return res.status(201).json(new ApiResponse(201, contact, "Contact form submitted successfully"));
+});
+
+export const addToCart = asyncHandler(async (req, res) => {
+  const userId = req.user?._id;
+  if (!userId) {
+    throw new ApiError(401, "User not authenticated");
+  }
+
+  let {
+    itemType = "catalog",
+    productId,
+    designId,
+    quantity,
+    selectedOptions = {},
+    generatedImageSnapshot,
+  } = req.body;
+  quantity = Number(quantity) || 0;
+
+  if (quantity < 1) {
+    throw new ApiError(400, "Valid quantity is required");
+  }
+
+  if (!["catalog", "ai_generated"].includes(itemType)) {
+    throw new ApiError(400, "Invalid itemType");
+  }
+
+  const resolvedItem = req.resolvedCartItem || {};
+
+  let cart = await Cart.findOne({ user: userId });
+  if (!cart) {
+    cart = await Cart.create({ user: userId, items: [] });
+  }
+
+  if (itemType === "catalog") {
+    const product = resolvedItem.product || await Product.findById(productId);
+    if (!product) throw new ApiError(404, "Product not found");
+
+    const existingItem = cart.items.find((item) => item.itemType === "catalog" && item.product?.toString() === String(product._id));
+    const existingQuantity = existingItem?.quantity || 0;
+
+    if (product.stock < (quantity + existingQuantity)) {
+      throw new ApiError(400, `Insufficient stock. Available: ${product.stock}, Requested: ${quantity + existingQuantity}`);
+    }
+
+    const pricing = calculateCatalogPrice(product);
+    const itemIndex = cart.items.findIndex((item) => item.itemType === "catalog" && item.product?.toString() === String(product._id));
+
+    if (itemIndex > -1) {
+      cart.items[itemIndex].quantity += quantity;
+      cart.items[itemIndex].priceSnapshot = {
+        unitPrice: pricing.finalPrice,
+        finalPrice: pricing.finalPrice,
+        currency: pricing.currency,
+      };
+    } else {
+      cart.items.push({
+        itemType: "catalog",
+        product: product._id,
+        quantity,
+        selectedOptions: {
+          highResolutionExport: false,
+          customPlacement: false,
+          backgroundRemoval: false,
+        },
+        priceSnapshot: {
+          unitPrice: pricing.finalPrice,
+          finalPrice: pricing.finalPrice,
+          currency: pricing.currency,
+        },
+      });
+    }
+  } else {
+    const design = resolvedItem.design || await Design.findById(designId);
+    if (!design) throw new ApiError(404, "Design not found");
+    if (String(design.user) !== String(userId)) {
+      throw new ApiError(403, "You cannot access another user's design");
+    }
+    if (design.isLocked) {
+      throw new ApiError(400, "Design is locked after checkout and cannot be modified");
+    }
+
+    const pricing = calculateAiGeneratedPrice({
+      hasBackgroundRemoval: Boolean(design.backgroundRemovedImage),
+      selectedOptions,
+    });
+
+    const itemIndex = cart.items.findIndex((item) => item.itemType === "ai_generated" && item.design?.toString() === String(design._id));
+
+    if (itemIndex > -1) {
+      cart.items[itemIndex].quantity = quantity;
+      cart.items[itemIndex].selectedOptions = pricing.selectedOptions;
+      cart.items[itemIndex].generatedImageSnapshot =
+        design.generatedImage ||
+        design.printReadyImage ||
+        design.backgroundRemovedImage ||
+        generatedImageSnapshot ||
+        "";
+      cart.items[itemIndex].priceSnapshot = {
+        unitPrice: pricing.finalPrice,
+        finalPrice: pricing.finalPrice,
+        currency: pricing.currency,
+      };
+    } else {
+      cart.items.push({
+        itemType: "ai_generated",
+        design: design._id,
+        quantity,
+        selectedOptions: pricing.selectedOptions,
+        generatedImageSnapshot:
+          design.generatedImage ||
+          design.printReadyImage ||
+          design.backgroundRemovedImage ||
+          generatedImageSnapshot ||
+          "",
+        priceSnapshot: {
+          unitPrice: pricing.finalPrice,
+          finalPrice: pricing.finalPrice,
+          currency: pricing.currency,
+        },
+      });
+    }
+
+    design.isAddedToCart = true;
+    design.selectedOptions = pricing.selectedOptions;
+    design.priceSnapshot = pricing;
+    await design.save();
+  }
+
+  await cart.save();
+
+  res.status(200).json({ success: true, message: "Item added to cart successfully", cart });
+});
+
+export const removeFromCart = asyncHandler(async (req, res) => {
+  const userId = req.user?._id;
+  if (!userId) {
+    throw new ApiError(401, "User not authenticated");
+  }
+
+  const { itemType = "catalog", productId, designId } = req.body;
+  if (itemType === "catalog" && !productId) {
+    throw new ApiError(400, "productId is required");
+  }
+  if (itemType === "ai_generated" && !designId) {
+    throw new ApiError(400, "designId is required");
+  }
+
+  const cart = await Cart.findOne({ user: userId });
+  if (!cart) {
+    throw new ApiError(404, "Cart not found");
+  }
+
+  const initialLength = cart.items.length;
+  cart.items = cart.items.filter((item) => {
+    if (itemType === "catalog") {
+      return !(item.itemType === "catalog" && item.product?.toString() === productId);
+    }
+    return !(item.itemType === "ai_generated" && item.design?.toString() === designId);
+  });
+
+  if (cart.items.length === initialLength) {
+    throw new ApiError(404, "Item not found in cart");
+  }
+
+  await cart.save();
+  res.status(200).json({ success: true, message: "Item removed from cart successfully", cart });
+});
+
+export const getCart = asyncHandler(async (req, res) => {
+  const userId = req.user?._id;
+  if (!userId) {
+    throw new ApiError(401, "User not authenticated");
+  }
+
+  const cart = await Cart.findOne({ user: userId })
+    .populate("items.product")
+    .populate("items.design");
+  if (!cart) {
+    return res.status(200).json({ success: true, cart: null, totalAmount: 0, items: [] });
+  }
+
+  const validItems = [];
+  let totalAmount = 0;
+
+  for (const item of cart.items) {
+    const qty = Number(item.quantity) || 0;
+    if (qty <= 0) continue;
+
+    if (item.itemType === "catalog") {
+      if (!item.product) continue;
+      const pricing = calculateCatalogPrice(item.product);
+      item.priceSnapshot = {
+        unitPrice: pricing.finalPrice,
+        finalPrice: pricing.finalPrice,
+        currency: pricing.currency,
+      };
+      totalAmount += pricing.finalPrice * qty;
+      validItems.push(item);
+      continue;
+    }
+
+    let designDoc = item.design;
+    if (!designDoc || !designDoc._id) {
+      if (item.design) {
+        designDoc = await Design.findById(item.design);
+      }
+    }
+
+    if (!designDoc) continue;
+    if (String(designDoc.user) !== String(userId)) continue;
+
+    const generatedImageSnapshot =
+      designDoc.generatedImage ||
+      designDoc.printReadyImage ||
+      designDoc.backgroundRemovedImage ||
+      designDoc.originalImage ||
+      item.generatedImageSnapshot ||
+      "";
+
+    item.generatedImageSnapshot = generatedImageSnapshot;
+    item.design = designDoc;
+
+    const pricing = calculateAiGeneratedPrice({
+      hasBackgroundRemoval: Boolean(designDoc.backgroundRemovedImage),
+      selectedOptions: item.selectedOptions || {},
+    });
+    item.selectedOptions = pricing.selectedOptions;
+    item.priceSnapshot = {
+      unitPrice: pricing.finalPrice,
+      finalPrice: pricing.finalPrice,
+      currency: pricing.currency,
+    };
+    totalAmount += pricing.finalPrice * qty;
+    validItems.push(item);
+  }
+
+  cart.items = validItems;
+  await cart.save();
+
+  const responseCart = cart.toObject({ virtuals: false });
+  responseCart.items = (responseCart.items || []).map((item) => {
+    const resolvedImage =
+      item.itemType === "ai_generated"
+        ? (
+            item.generatedImageSnapshot ||
+            item.design?.generatedImage ||
+            item.design?.printReadyImage ||
+            item.design?.backgroundRemovedImage ||
+            item.design?.originalImage ||
+            ""
+          )
+        : (item.product?.image || item.product?.productImage || "");
+
+    return {
+      ...item,
+      resolvedImage,
+    };
+  });
+
+  res.status(200).json({ success: true, cart: responseCart, totalAmount });
 });
 
 

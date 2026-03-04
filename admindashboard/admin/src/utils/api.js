@@ -158,4 +158,25 @@ export const deleteContact = async (id) => {
   return response.data;
 };
 
+// ============ AI DESIGN APIs ============
+export const getAllAiDesigns = async () => {
+  const response = await api.get('/designs/admin/all');
+  return response.data;
+};
+
+export const moderateAiDesign = async (id, action, reason = '') => {
+  const response = await api.patch(`/designs/admin/${id}/moderate`, { action, reason });
+  return response.data;
+};
+
+export const getPrintableAiDesign = async (id) => {
+  const response = await api.get(`/designs/admin/${id}/print`);
+  return response.data;
+};
+
+export const deleteUnpaidAiDesign = async (id) => {
+  const response = await api.delete(`/designs/admin/${id}`);
+  return response.data;
+};
+
 export default api;
